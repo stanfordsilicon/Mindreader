@@ -19,7 +19,7 @@ function App() {
     setError(''); 
 
     try {
-      const emoji = await fetchRandomEmoji();
+      const emoji = await fetchRandomEmoji(); // Fetches a random emoji from the server
       setCurrentEmoji(emoji);
       setKeywords(['', '', '', '']);
       setShowEmoji(true);
@@ -34,14 +34,24 @@ function App() {
     }
   };
 
+  /* The "handleKeywordChange" function handles the functionality of the keyword input fields. 
+  When the user types in a keyword, it will update the "keywords" state with the new keyword.
+  The "index" parameter is the index of the keyword that is being updated, 
+  and the "value" parameter is the new value of the keyword. The function creates a new list with the updated keyword,
+  and then updates the "keywords" state with the new list.
+  */
   const handleKeywordChange = (index: number, value: string) => {
     setKeywords((prev) => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
+      const next = [...prev]; // Creates a new list with the updated keyword
+      next[index] = value; // Updates the keyword at the specified index with the new value
+      return next; 
     });
   };
 
+  /* The "handleTryAnother" function handles the functionality of the "Try another emoji" button.
+  When the button is clicked, it will reset the "showEmoji", "currentEmoji", "keywords", and "error" states to their initial values.
+  This will allow the user to reveal a new emoji and enter new keywords.
+  */
   const handleTryAnother = () => {
     setShowEmoji(false);
     setCurrentEmoji('');
@@ -49,6 +59,13 @@ function App() {
     setError('');
   };
 
+  /* The "return" statement returns the rendered UI of the game. 
+  It includes the header, the stage, the error message, and the keyword panel.
+  The header includes the title and the brief description of the game.
+  The stage includes the button to reveal an emoji and the emoji that is being displayed.
+  The error message is displayed if there is an error with the emoji (e.g. the emoji can't be loaded).
+  The keyword panel includes the prompt to describe the emoji, the input fields for the keywords, and the button to describe another emoji.
+  */
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
