@@ -3,15 +3,20 @@ import { fetchRandomEmoji } from './api';
 import './App.css';
 
 function App() {
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [currentEmoji, setCurrentEmoji] = useState('');
-  const [keywords, setKeywords] = useState(['', '', '', '']);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [showEmoji, setShowEmoji] = useState(false); // Whether the emoji is being displayed (starts as false, then becomes true when the emoji is revealed)
+  const [currentEmoji, setCurrentEmoji] = useState(''); // The current emoji that is being displayed (starts as an empty string, then becomes the revealed emoji)
+  const [keywords, setKeywords] = useState(['', '', '', '']); // The keywords that the user has entered (starts as a list of empty strings, then gets updated with the user's keywords)
+  const [isLoading, setIsLoading] = useState(false); // Whether the emoji is being loaded (starts as false, then becomes true when the emoji is being loaded)
+  const [error, setError] = useState(''); // Will display an error message if the emoji can't be loaded
 
+  /* The "handleRevealEmoji" function handles the functionality of the "Show me an emoji!" button. When clicked,
+  it will set the loading state to true, clear any error messages, and then try to fetch a random emoji.
+  If the emoji loads successfully, then the user will be able to see the emoji and enter keywords to describe it.
+  If the emoji fails to load, then an error message will be displayed.
+  */
   const handleRevealEmoji = async () => {
-    setIsLoading(true);
-    setError('');
+    setIsLoading(true); 
+    setError(''); 
 
     try {
       const emoji = await fetchRandomEmoji();
@@ -47,7 +52,7 @@ function App() {
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
-        <h1>Qmoji</h1>
+        <h1>Welcome to Qmoji!</h1>
         <p>
           Click the button to reveal an emoji, then describe it with four
           keywords.
@@ -62,7 +67,7 @@ function App() {
             onClick={handleRevealEmoji}
             disabled={isLoading}
           >
-            {isLoading ? 'Loading emoji...' : 'Show me an emoji'}
+            {isLoading ? 'Loading emoji...' : 'Show me an emoji!'}
           </button>
         ) : (
           <div className="emoji-display" aria-label="Random emoji">
