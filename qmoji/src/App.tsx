@@ -1,122 +1,125 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import { fetchRandomEmoji } from './api';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [currentEmoji, setCurrentEmoji] = useState('');
+  const [keywords, setKeywords] = useState(['', '', '', '']);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleRevealEmoji = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const emoji = await fetchRandomEmoji();
+      setCurrentEmoji(emoji);
+      setKeywords(['', '', '', '']);
+      setShowEmoji(true);
+    } catch (fetchError) {
+      const message =
+        fetchError instanceof Error
+          ? fetchError.message
+          : 'Could not load an emoji from the server.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeywordChange = (index: number, value: string) => {
+    setKeywords((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const handleTryAnother = () => {
+    setShowEmoji(false);
+    setCurrentEmoji('');
+    setKeywords(['', '', '', '']);
+    setError('');
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+    <main className="qmoji-app">
+      <header className="qmoji-header">
+        <h1>Qmoji</h1>
+        <p>
+          Click the button to reveal an emoji, then describe it with four
+          keywords.
+        </p>
+      </header>
+
+      <section className="qmoji-stage" aria-live="polite">
+        {!showEmoji ? (
+          <button
+            type="button"
+            className="reveal-button"
+            onClick={handleRevealEmoji}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Loading emoji...' : 'Show me an emoji'}
+          </button>
+        ) : (
+          <div className="emoji-display" aria-label="Random emoji">
+            <span className="emoji" role="img">
+              {currentEmoji}
+            </span>
+          </div>
+        )}
+      </section>
+
+      {error && (
+        <p className="qmoji-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {showEmoji && (
+        <section className="keyword-panel" aria-labelledby="keyword-prompt">
+          <h2 id="keyword-prompt">Describe this emoji</h2>
+          <p className="keyword-prompt">
+            What four words come to mind for{' '}
+            <span className="emoji-inline" aria-hidden="true">
+              {currentEmoji}
+            </span>
+            ?
           </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+          <form className="keyword-form" onSubmit={(event) => event.preventDefault()}>
+            <div className="keyword-grid">
+              {keywords.map((keyword, index) => (
+                <label key={index} className="keyword-field">
+                  Keyword {index + 1}
+                  <input
+                    type="text"
+                    value={keyword}
+                    placeholder={`Keyword ${index + 1}`}
+                    onChange={(event) =>
+                      handleKeywordChange(index, event.target.value)
+                    }
+                    autoComplete="off"
+                  />
+                </label>
+              ))}
+            </div>
+          </form>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleTryAnother}
+          >
+            Try another emoji
+          </button>
+        </section>
+      )}
+    </main>
+  );
 }
 
-export default App
+export default App;
