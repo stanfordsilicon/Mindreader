@@ -36,6 +36,7 @@ def new_game(language="en"):
         "players": [],
         "scores": {},
         "submissions": {},
+        "answer_counts": {},  # round number -> Counter of the answers given that round
     }
 
 
@@ -128,20 +129,31 @@ def scoringSystem(room_id):
 
 """
 
-@app.route('/whatevernamewewant') #come up with better url director
-def index():
-    return flask.render_template('somethingfunction.html') # create html file to do this shit
 
 
 
 
-
-
-def retrieve_input_stack(input_stack):
+def retrieve_input_stack(room_id, input_stack, round_number=None):
+    
     if figured_out_sql:
         return uploaddatatosql(input_stack)
+    
+    game = games.get(room_id)
+    if not game:
+        return None
+
+    if not round_number:
+        round_number = game["round"]
+
+    counts = Counter(input_stack)
+
+    existing = game["answer_counts"].get(round_number)
+    if not existing:
+        game["answer_counts"][round_number] = counts
     else:
-        return Counter(input_stack)
+        existing.update(counts)
+
+    return game["answer_counts"][round_number]
 
 
 
