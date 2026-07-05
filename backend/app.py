@@ -1,8 +1,6 @@
 import random
 import flask
-from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-import datetime
 from collections import Counter
 import time
 import uuid
@@ -78,7 +76,7 @@ def post_start_dataRetrieve():
     language = data['language']
     seconds_per_round = data['seconds_per_round']
 
-#according to GPT, you could implement a timer function using a websocket, but I still need to learn how that works
+#according to GPT, you could implement a multiplayer timer function using a websocket, but I still need to learn how that works
 #Here is what I have for now, but it is not working yet, and I will need to learn how to implement a websocket for this to work
 """class RoundTimer:
     def __init__(self):
@@ -128,6 +126,8 @@ def start_round(room_id):
     game["state"] = "playing"
     return flask.jsonify({"emoji": game["current_emoji"], "round": game["round"]})
 
+
+#Here be the code to calculate scores for each player
 """ 
 def scoringSystem(room_id):
     #for ... in json #read json stuff
