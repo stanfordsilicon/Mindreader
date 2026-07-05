@@ -1,7 +1,7 @@
 iimport { useState } from "react";
 
 export default function StartMenu() {
-  const [players, setPlayers] = useState(1);
+  const [Seconds_per_round, setSeconds_per_round] = useState(10);
   const [language, setLanguage] = useState("Type your language here");
 
   const handleStart = async () => {
@@ -13,4 +13,20 @@ export default function StartMenu() {
     const data = await res.json();
     console.log(data);
   };
+  return (
+    <div>
+      <input
+        type="number"
+        value={Seconds_per_round}
+        onChange={(e) => setSeconds_per_round(Number(e.target.value))}
+      />
+      <input
+        type="text"
+        value={language}
+        onChange={(e) => setLanguage(e.target.value)}
+      />
+      <button onClick={handleStart}>Start</button>
+    </div>
+  );
+}
 
