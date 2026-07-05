@@ -1,5 +1,5 @@
 const EMOJI_API_URL =
-  import.meta.env.VITE_EMOJI_API_URL ?? '/api/message';
+  import.meta.env.VITE_EMOJI_API_URL ?? '/api/index';
 
 type EmojiResponse = {
   message?: string;
