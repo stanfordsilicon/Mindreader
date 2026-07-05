@@ -78,8 +78,7 @@ def post_start_dataRetrieve():
 
 
 
-@app.route("/index") # route for frontend index
-@app.route("/api/message") # API endpoint for frontend emoji fetches
+@app.route("/index") #I dont know what the director should be, but this is the route for Hui Ying's tsx filex
 def sendEmoji():
     rand = random.choice(emoji_list)
     return flask.jsonify({"message": rand})
