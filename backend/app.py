@@ -9,7 +9,6 @@ import uuid
 
 figured_out_sql = False
 app = flask.Flask(__name__) # I have not yet figured out a proper name
-CORS(app)  # Enable CORS for all routes
 
 def load_emojis(path="emoji_list.txt"):
     try:
@@ -36,7 +35,7 @@ def new_game(language="en"):
         "players": [],
         "scores": {},
         "submissions": {},
-        "answer_counts": {},  # round number -> Counter of the answers given that round
+        "answer_counts": {}, 
     }
 
 
@@ -64,6 +63,8 @@ def create_room():
 language = ""
 seconds_per_round = 0
 
+
+
 @app.route('/poststart') # this is the page that will be redirected to after the start button is clicked
 def post_start():
 
@@ -77,7 +78,18 @@ def post_start_dataRetrieve():
     language = data['language']
     seconds_per_round = data['seconds_per_round']
 
-
+#according to GPT, you could implement a timer function using a websocket, but I still need to learn how that works
+#Here is what I have for now, but it is not working yet, and I will need to learn how to implement a websocket for this to work
+"""class RoundTimer:
+    def __init__(self):
+        self.start_time = None
+    def start(self):
+        self.start_time = time.time()
+    def get_remaining_time(self):
+        if self.start_time is None:
+            return seconds_per_round
+        elapsed_time = time.time() - self.start_time
+        return max(0, seconds_per_round - elapsed_time)"""
 
 @app.route("/api/index") #I dont know what the director should be, but this is the route for Hui Ying's tsx filex
 def sendEmoji():
@@ -133,7 +145,7 @@ def scoringSystem(room_id):
 
 
 
-def retrieve_input_stack(room_id, input_stack, round_number=None):
+def retrieve_input_stack(room_id, input_stack, current_emoji=None):
     
     if figured_out_sql:
         return uploaddatatosql(input_stack)
@@ -142,19 +154,18 @@ def retrieve_input_stack(room_id, input_stack, round_number=None):
     if not game:
         return None
 
-    if not round_number:
-        round_number = game["round"]
+    if not current_emoji:
+        current_emoji = game["current_emoji"]
 
     counts = Counter(input_stack)
 
-    existing = game["answer_counts"].get(round_number)
-    if not existing:
-        game["answer_counts"][round_number] = counts
+    existing = game["answer_counts"].get(current_emoji)
+    if existing is None:
+        game["answer_counts"][current_emoji] = counts
     else:
         existing.update(counts)
 
-    return game["answer_counts"][round_number]
-
+    return game["answer_counts"][current_emoji]
 
 
 def uploaddatatosql(in_stack):
