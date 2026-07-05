@@ -1,4 +1,4 @@
-iimport { useState } from "react";
+import { useState } from "react";
 
 export default function StartMenu() {
   const [Seconds_per_round, setSeconds_per_round] = useState(10);

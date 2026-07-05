@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Strings</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <main class="card">
+    <h1>Submit up to 4 strings</h1>
+    <p class="subtitle">Add one or more entries, then send them to the backend.</p>
+
+    <form id="string-form">
+      <div id="fields"></div>
+
+      <button type="button" id="add-field" class="btn-secondary">+ Add another</button>
+
+      <div class="actions">
+        <button type="submit" class="btn-primary">Send</button>
+      </div>
+    </form>
+
+    <div id="result" class="result" hidden></div>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
