@@ -36,6 +36,8 @@ def new_game(language="en"):
     }
 #The above function returns a new game dict with all the information of a new game
 
+# -- might be handy to implement per-player logs for inappropriate content removal and to check on messing with data
+#there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
 
 @app.route('/') # starting page
 def start_page():
@@ -170,3 +172,12 @@ def uploaddatatosql(in_stack):
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
+
+
+
+
+
+
+
+
+# -- for post-summer: implement a flagging system for inappropriate content
