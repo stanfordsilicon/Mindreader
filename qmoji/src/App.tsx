@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { fetchRandomEmoji } from './api';
+import { supabase } from './supabaseClient';
 import './App.css';
 
 function App() {
@@ -7,7 +8,9 @@ function App() {
   const [currentEmoji, setCurrentEmoji] = useState(''); // The current emoji that is being displayed (starts as an empty string, then becomes the revealed emoji)
   const [keywords, setKeywords] = useState(['', '', '', '']); // The keywords that the user has entered (starts as a list of empty strings, then gets updated with the user's keywords)
   const [isLoading, setIsLoading] = useState(false); // Whether the emoji is being loaded (starts as false, then becomes true when the emoji is being loaded)
-  const [error, setError] = useState(''); // Will display an error message if the emoji can't be loaded
+  const [isSubmitting, setIsSubmitting] = useState(false); // Whether the data is being saved to the database
+  const [submitSuccess, setSubmitSuccess] = useState(false); // Whether the data was successfully saved
+  const [error, setError] = useState(''); // Will display an error message if the emoji can't be loaded or saved
 
   /* The "handleRevealEmoji" function handles the functionality of the "Show me an emoji!" button. When clicked,
   it will set the loading state to true, clear any error messages, and then try to fetch a random emoji.
@@ -17,6 +20,7 @@ function App() {
   const handleRevealEmoji = async () => {
     setIsLoading(true); 
     setError(''); 
+    setSubmitSuccess(false);
 
     try {
       const emoji = await fetchRandomEmoji(); // Fetches a random emoji from the server
@@ -48,6 +52,38 @@ function App() {
     });
   };
 
+  /* The "handleSubmit" function saves the emoji and keywords to the Supabase database. */
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    // Basic validation to ensure all keywords are filled
+    if (keywords.some(kw => kw.trim() === '')) {
+      setError('Please fill out all four keywords before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      // Call the Supabase RPC function to increment the counts for each keyword
+      const { error: supabaseError } = await supabase
+        .rpc('increment_keyword_counts', {
+          p_emoji: currentEmoji,
+          p_keywords: keywords
+        });
+
+      if (supabaseError) throw supabaseError;
+
+      setSubmitSuccess(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save to database.';
+      setError(`Database Error: ${message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   /* The "handleTryAnother" function handles the functionality of the "Try another emoji" button.
   When the button is clicked, it will reset the "showEmoji", "currentEmoji", "keywords", and "error" states to their initial values.
   This will allow the user to reveal a new emoji and enter new keywords.
@@ -57,6 +93,7 @@ function App() {
     setCurrentEmoji('');
     setKeywords(['', '', '', '']);
     setError('');
+    setSubmitSuccess(false);
   };
 
   /* The "return" statement returns the rendered UI of the game. 
@@ -101,6 +138,12 @@ function App() {
         </p>
       )}
 
+      {submitSuccess && (
+        <p className="qmoji-success" role="alert" style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}>
+          Successfully saved your keywords!
+        </p>
+      )}
+
       {showEmoji && (
         <section className="keyword-panel" aria-labelledby="keyword-prompt">
           <h2 id="keyword-prompt">Describe this emoji</h2>
@@ -112,7 +155,7 @@ function App() {
             ?
           </p>
 
-          <form className="keyword-form" onSubmit={(event) => event.preventDefault()}>
+          <form className="keyword-form" onSubmit={handleSubmit}>
             <div className="keyword-grid">
               {keywords.map((keyword, index) => (
                 <label key={index} className="keyword-field">
@@ -125,16 +168,28 @@ function App() {
                       handleKeywordChange(index, event.target.value)
                     }
                     autoComplete="off"
+                    disabled={isSubmitting || submitSuccess}
                   />
                 </label>
               ))}
             </div>
+            {!submitSuccess && (
+              <button 
+                type="submit" 
+                className="submit-button" 
+                disabled={isSubmitting}
+                style={{ marginTop: '1rem', width: '100%', padding: '0.75rem', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                {isSubmitting ? 'Saving...' : 'Submit Keywords'}
+              </button>
+            )}
           </form>
 
           <button
             type="button"
             className="secondary-button"
             onClick={handleTryAnother}
+            style={{ marginTop: '1rem' }}
           >
             Try another emoji
           </button>
