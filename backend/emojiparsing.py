@@ -23,3 +23,5 @@ for emoji in [
 ]:
 
     print('"' + emoji + '"')
+
+    # test
