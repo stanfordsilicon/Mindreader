@@ -56,9 +56,10 @@ function App() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
-    // Basic validation to ensure all keywords are filled
-    if (keywords.some(kw => kw.trim() === '')) {
-      setError('Please fill out all four keywords before submitting.');
+    // Basic validation to ensure at least one keyword is filled
+    const filledKeywords = keywords.filter(kw => kw.trim() !== '');
+    if (filledKeywords.length === 0) {
+      setError('Please fill out at least one keyword before submitting.');
       return;
     }
 
@@ -70,7 +71,7 @@ function App() {
       const { error: supabaseError } = await supabase
         .rpc('increment_keyword_counts', {
           p_emoji: currentEmoji,
-          p_keywords: keywords
+          p_keywords: filledKeywords
         });
 
       if (supabaseError) throw supabaseError;
@@ -108,29 +109,10 @@ function App() {
       <header className="qmoji-header">
         <h1>Welcome to Qmoji!</h1>
         <p>
-          Click the button to reveal an emoji, then describe it with four
+          Click the button to reveal an emoji, then describe it with up to four
           keywords.
         </p>
       </header>
-
-      <section className="qmoji-stage" aria-live="polite">
-        {!showEmoji ? (
-          <button
-            type="button"
-            className="reveal-button"
-            onClick={handleRevealEmoji}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading emoji...' : 'Show me an emoji!'}
-          </button>
-        ) : (
-          <div className="emoji-display" aria-label="Random emoji">
-            <span className="emoji" role="img">
-              {currentEmoji}
-            </span>
-          </div>
-        )}
-      </section>
 
       {error && (
         <p className="qmoji-error" role="alert">
@@ -144,56 +126,78 @@ function App() {
         </p>
       )}
 
-      {showEmoji && (
-        <section className="keyword-panel" aria-labelledby="keyword-prompt">
-          <h2 id="keyword-prompt">Describe this emoji</h2>
-          <p className="keyword-prompt">
-            What four words come to mind for{' '}
-            <span className="emoji-inline" aria-hidden="true">
-              {currentEmoji}
-            </span>
-            ?
-          </p>
-
-          <form className="keyword-form" onSubmit={handleSubmit}>
-            <div className="keyword-grid">
-              {keywords.map((keyword, index) => (
-                <label key={index} className="keyword-field">
-                  Keyword {index + 1}
-                  <input
-                    type="text"
-                    value={keyword}
-                    placeholder={`Keyword ${index + 1}`}
-                    onChange={(event) =>
-                      handleKeywordChange(index, event.target.value)
-                    }
-                    autoComplete="off"
-                    disabled={isSubmitting || submitSuccess}
-                  />
-                </label>
-              ))}
-            </div>
-            {!submitSuccess && (
-              <button 
-                type="submit" 
-                className="submit-button" 
-                disabled={isSubmitting}
-                style={{ marginTop: '1rem', width: '100%', padding: '0.75rem', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-              >
-                {isSubmitting ? 'Saving...' : 'Submit Keywords'}
-              </button>
-            )}
-          </form>
-
+      {!showEmoji ? (
+        <section className="qmoji-stage" aria-live="polite">
           <button
             type="button"
-            className="secondary-button"
-            onClick={handleTryAnother}
-            style={{ marginTop: '1rem' }}
+            className="reveal-button"
+            onClick={handleRevealEmoji}
+            disabled={isLoading}
           >
-            Try another emoji
+            {isLoading ? 'Loading emoji...' : 'Show me an emoji!'}
           </button>
         </section>
+      ) : (
+        <div className="workspace-container">
+          <section className="qmoji-stage" aria-live="polite">
+            <div className="emoji-display" aria-label="Random emoji">
+              <span className="emoji" role="img">
+                {currentEmoji}
+              </span>
+            </div>
+          </section>
+
+          <section className="keyword-panel" aria-labelledby="keyword-prompt">
+            <h2 id="keyword-prompt">Describe this emoji</h2>
+            <p className="keyword-prompt">
+              What words come to mind for{' '}
+              <span className="emoji-inline" aria-hidden="true">
+                {currentEmoji}
+              </span>
+              ?
+            </p>
+
+            <form className="keyword-form" onSubmit={handleSubmit}>
+              <div className="keyword-grid">
+                {keywords.map((keyword, index) => (
+                  <label key={index} className="keyword-field">
+                    Keyword {index + 1}
+                    <input
+                      type="text"
+                      value={keyword}
+                      placeholder={`Keyword ${index + 1}`}
+                      onChange={(event) =>
+                        handleKeywordChange(index, event.target.value)
+                      }
+                      autoComplete="off"
+                      disabled={isSubmitting || submitSuccess}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '24px' }}>
+                {!submitSuccess && (
+                  <button 
+                    type="submit" 
+                    className="submit-button" 
+                    disabled={isSubmitting}
+                    style={{ flex: 1, padding: '12px 24px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '999px', cursor: 'pointer', font: 'inherit', fontWeight: 500 }}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Submit Keywords'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleTryAnother}
+                  style={{ flex: 1, margin: 0, width: submitSuccess ? '100%' : 'auto' }}
+                >
+                  Try another emoji
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
     </main>
   );
