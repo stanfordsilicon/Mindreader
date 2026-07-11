@@ -1,17 +1,32 @@
 import random
 import flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from collections import Counter
 import time
 import uuid
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = flask.Flask(__name__) # -- I have not yet figured out a proper name
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 280,
+    "pool_pre_ping": True,
+}
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 SinglePlayerOnlyForNow = True #Switch for later, for now, we will only allow single player games, but later we will allow multiplayer games
 #Thus, until we have implemented multiplayer, the room_id can be hardcoded to "1" for now, which will cause a lot less confusion for now
 figured_out_sql = False #'switch for later (retrieve_input_stack), for now, we will just store the data in a dictionary, but later we will store it in a SQL database
 language = ""
-seconds_per_round = 0
+seconds_per_round = 30
 
-app = flask.Flask(__name__) # -- I have not yet figured out a proper name
 #-------#
 
 def load_emojis(path="emoji_list.txt"):
@@ -63,6 +78,7 @@ def post_start():
 # this is the page that will be redirected to after the start button is clicked, 
 # -- merge with Hui Ying's page
 
+@app.route('/poststartDataRetrieve') 
 def post_start_dataRetrieve():
     data = flask.request.get_json(silent=True)
     if not data or 'language' not in data or 'seconds_per_round' not in data:
@@ -92,6 +108,8 @@ def sendEmoji():
     return flask.jsonify({"message": rand})
 #The above and below functions send out the current emoji and the time per round respectively
 # to the frontend, so that the frontend can display it to the user
+
+# -- define a route
 def sendTimeController():
     return flask.jsonify({"seconds_per_round": seconds_per_round})
 
@@ -144,8 +162,11 @@ def retrieve_input_stack(room_id, input_stack, current_emoji=None):
     # -- would probably be faster to delete this once uploadtodatatosql is implemented
     # -- Also, include scored for the word from scoringSystem()
     if figured_out_sql:
-        return uploaddatatosql(input_stack)
-    
+        game = games.get(room_id)
+        lang = game["language"] if game else "en"
+        emoji = current_emoji or (game["current_emoji"] if game else None)
+        return uploaddatatosql(lang, emoji, input_stack)
+        
     game = games.get(room_id)
     if not game:
         return None
@@ -164,20 +185,91 @@ def retrieve_input_stack(room_id, input_stack, current_emoji=None):
     return game["answer_counts"][current_emoji]
 
 
-def uploaddatatosql(in_stack):
-    #Here be the code to upload data to SQL database
-    pass
+class Room(db.Model):
+    __tablename__ = "rooms"
+    id = db.Column(db.String(4), primary_key=True)
+    state = db.Column(db.String(20), default="waiting")
+    round = db.Column(db.Integer, default=0)
+    language = db.Column(db.String(20), default="No_language_selected")
+    current_emoji = db.Column(db.String(1, collation="utf8mb4_unicode_ci"))
 
+    players = db.relationship("Player", backref="room", cascade="all, delete-orphan")
+    submissions = db.relationship("Submission", backref="room", cascade="all, delete-orphan")
+
+
+class Player(db.Model):
+    __tablename__ = "players"
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.String(4), db.ForeignKey("rooms.id"))
+    name = db.Column(db.String(50))
+    score = db.Column(db.Integer, default=0)
+
+
+class Submission(db.Model):
+    __tablename__ = "submissions"
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.String(4), db.ForeignKey("rooms.id"))
+    player_id = db.Column(db.Integer, db.ForeignKey("players.id"))
+    emoji = db.Column(db.String(10, collation="utf8mb4_unicode_ci"))
+    guess = db.Column(db.String(100))
+    round = db.Column(db.Integer)
+
+
+class AnswerCount(db.Model):
+    __tablename__ = "answer_counts"
+    id = db.Column(db.Integer, primary_key=True)
+    language = db.Column(db.String(10))
+    emoji = db.Column(db.String(10, collation="utf8mb4_unicode_ci"))
+    word = db.Column(db.String(100))
+    count = db.Column(db.Integer, default=0)
+
+    __table_args__ = (
+        db.UniqueConstraint("language", "emoji", "word", name="uq_answer"),
+        db.Index("idx_lang_emoji", "language", "emoji"),
+    )
+
+def record_answer(language: str, emoji: str, word: str):
+    """
+    Increments the global count for a given language+emoji+word combo,
+    regardless of which room the guess came from.
+    """
+    normalized_word = word.strip().lower()
+
+    answer = AnswerCount.query.filter_by(
+        language=language,
+        emoji=emoji,
+        word=normalized_word
+    ).first()
+
+    if answer:
+        answer.count += 1
+    else:
+        answer = AnswerCount(
+            language=language,
+            emoji=emoji,
+            word=normalized_word,
+            count=1
+        )
+        db.session.add(answer)
+
+    db.session.commit()
+    return answer
+
+def uploaddatatosql(language, emoji, input_stack):
+    counts = Counter(w.strip().lower() for w in input_stack)
+    for word, n in counts.items():
+        row = AnswerCount.query.filter_by(
+            language=language, emoji=emoji, word=word
+        ).first()
+        if row:
+            row.count += n
+        else:
+            db.session.add(AnswerCount(language=language, emoji=emoji, word=word, count=n))
+    db.session.commit()
 
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
-
-
-
-
-
-
 
 
 # -- for post-summer: implement a flagging system for inappropriate content
