@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchRandomEmoji } from './api';
 import { supabase } from './supabaseClient';
 import './App.css';
@@ -7,10 +7,28 @@ function App() {
   const [showEmoji, setShowEmoji] = useState(false); // Whether the emoji is being displayed (starts as false, then becomes true when the emoji is revealed)
   const [currentEmoji, setCurrentEmoji] = useState(''); // The current emoji that is being displayed (starts as an empty string, then becomes the revealed emoji)
   const [keywords, setKeywords] = useState(['', '', '', '']); // The keywords that the user has entered (starts as a list of empty strings, then gets updated with the user's keywords)
+  const [inputLanguage, setInputLanguage] = useState('English'); // The language the user will be inputting keywords in
   const [isLoading, setIsLoading] = useState(false); // Whether the emoji is being loaded (starts as false, then becomes true when the emoji is being loaded)
   const [isSubmitting, setIsSubmitting] = useState(false); // Whether the data is being saved to the database
   const [submitSuccess, setSubmitSuccess] = useState(false); // Whether the data was successfully saved
   const [error, setError] = useState(''); // Will display an error message if the emoji can't be loaded or saved
+  const [timeLeft, setTimeLeft] = useState(30); // Timer that limits how long users have to enter keywords
+
+  /* The useEffect hook handles the countdown timer functionality.
+  When the emoji is displayed and the time left is greater than 0, it decreases the time by 1 every second.
+  It stops counting down if the user successfully submits their keywords.
+  */
+  useEffect(() => {
+    let timer: number;
+    if (showEmoji && timeLeft > 0 && !submitSuccess) {
+      timer = window.setTimeout(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [showEmoji, timeLeft, submitSuccess]);
 
   /* The "handleRevealEmoji" function handles the functionality of the "Show me an emoji!" button. When clicked,
   it will set the loading state to true, clear any error messages, and then try to fetch a random emoji.
@@ -26,6 +44,7 @@ function App() {
       const emoji = await fetchRandomEmoji(); // Fetches a random emoji from the server
       setCurrentEmoji(emoji);
       setKeywords(['', '', '', '']);
+      setTimeLeft(30);
       setShowEmoji(true);
     } catch (fetchError) {
       const message =
@@ -93,6 +112,7 @@ function App() {
     setShowEmoji(false);
     setCurrentEmoji('');
     setKeywords(['', '', '', '']);
+    setTimeLeft(30);
     setError('');
     setSubmitSuccess(false);
   };
@@ -109,9 +129,33 @@ function App() {
       <header className="qmoji-header">
         <h1>Welcome to Qmoji!</h1>
         <p>
-          Click the button to reveal an emoji, then describe it with up to four
-          keywords.
+          Describe the emoji with up to four keywords in 30 seconds! 
+          New game modes coming soon.
         </p>
+        {!showEmoji && (
+          <div className="language-selector" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <label htmlFor="language-input" style={{ fontSize: '0.95rem', color: 'var(--text-h)' }}>
+              What language will you be using for your keywords?
+            </label>
+            <input
+              id="language-input"
+              type="text"
+              value={inputLanguage}
+              onChange={(e) => setInputLanguage(e.target.value)}
+              placeholder="e.g. English, Spanish, etc."
+              style={{ 
+                padding: '10px 14px', 
+                borderRadius: '10px', 
+                border: '1px solid var(--border)', 
+                background: 'var(--bg)', 
+                color: 'var(--text-h)', 
+                font: 'inherit',
+                textAlign: 'center',
+                minWidth: '240px'
+              }}
+            />
+          </div>
+        )}
       </header>
 
       {error && (
@@ -139,7 +183,10 @@ function App() {
         </section>
       ) : (
         <div className="workspace-container">
-          <section className="qmoji-stage" aria-live="polite">
+          <section className="qmoji-stage" aria-live="polite" style={{ flexDirection: 'column', gap: '24px' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: timeLeft <= 5 ? '#b42318' : 'var(--text-h)', textAlign: 'center' }}>
+              {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up!"}
+            </div>
             <div className="emoji-display" aria-label="Random emoji">
               <span className="emoji" role="img">
                 {currentEmoji}
@@ -148,14 +195,13 @@ function App() {
           </section>
 
           <section className="keyword-panel" aria-labelledby="keyword-prompt">
-            <h2 id="keyword-prompt">Describe this emoji</h2>
-            <p className="keyword-prompt">
+            <h2 id="keyword-prompt" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               What words come to mind for{' '}
-              <span className="emoji-inline" aria-hidden="true">
+              <span className="emoji-inline" aria-hidden="true" style={{ fontSize: '1.2em' }}>
                 {currentEmoji}
               </span>
               ?
-            </p>
+            </h2>
 
             <form className="keyword-form" onSubmit={handleSubmit}>
               <div className="keyword-grid">
@@ -165,12 +211,12 @@ function App() {
                     <input
                       type="text"
                       value={keyword}
-                      placeholder={`Keyword ${index + 1}`}
+                      placeholder={`Keyword ${index + 1}${inputLanguage.trim() ? ` (${inputLanguage.trim()})` : ''}`}
                       onChange={(event) =>
                         handleKeywordChange(index, event.target.value)
                       }
                       autoComplete="off"
-                      disabled={isSubmitting || submitSuccess}
+                      disabled={isSubmitting || submitSuccess || timeLeft === 0}
                     />
                   </label>
                 ))}
