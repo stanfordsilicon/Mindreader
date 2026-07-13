@@ -23,11 +23,10 @@ migrate = Migrate(app, db)
 
 SinglePlayerOnlyForNow = True #Switch for later, for now, we will only allow single player games, but later we will allow multiplayer games
 #Thus, until we have implemented multiplayer, the room_id can be hardcoded to "1" for now, which will cause a lot less confusion for now
-figured_out_sql = False #'switch for later (retrieve_input_stack), for now, we will just store the data in a dictionary, but later we will store it in a SQL database
+figured_out_sql = True #'switch for later (retrieve_input_stack), for now, we will just store the data in a dictionary, but later we will store it in a SQL database
 language = ""
 seconds_per_round = 30
 
-app = flask.Flask(__name__) # -- I have not yet figured out a proper name
 #-------#
 
 def load_emojis(path="emoji_list.txt"):
@@ -143,6 +142,37 @@ def start_round(room_id):
     game["state"] = "playing"
     return flask.jsonify({"emoji": game["current_emoji"], "round": game["round"]})
 
+@app.route("/<room_id>/submit", methods=["POST"])
+def submit_keywords(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    data = flask.request.get_json(silent=True) or {}
+    keywords = data.get("keywords")
+    player_id = data.get("player_id", "player1")  # placeholder until multiplayer exists
+
+    if not keywords or not isinstance(keywords, list):
+        return flask.jsonify({"error": "keywords must be a non-empty list"}), 400
+
+    # filter out blanks, same rule your frontend already enforces
+    input_stack = [kw.strip() for kw in keywords if isinstance(kw, str) and kw.strip()]
+    if not input_stack:
+        return flask.jsonify({"error": "No valid keywords submitted"}), 400
+
+    game["submissions"][player_id] = input_stack
+
+    try:
+        result = retrieve_input_stack(room_id, input_stack, game["current_emoji"])
+    except Exception as e:
+        return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
+
+    return flask.jsonify({
+        "message": "Keywords submitted",
+        "emoji": game["current_emoji"],
+        "submitted_count": len(game["submissions"]),
+    })
+
 # -- Here be the code to calculate scores for each player, implement upon multiplayer
 """ 
 def scoringSystem(room_id):
@@ -154,14 +184,10 @@ def scoringSystem(room_id):
     pass
     #send out the jsonified files to the frontend, to display to user and create dopamine
 """
-
-def retrieve_input_stack(room_id, input_stack, current_emoji=None):
     #for now, stores the amount of guesses per keyword and keywords in a dict
     # -- would probably be faster to delete this once uploadtodatatosql is implemented
     # -- Also, include scored for the word from scoringSystem()
-    if figured_out_sql:
-        return uploaddatatosql(input_stack)
-    
+def retrieve_input_stack(room_id, input_stack, current_emoji=None):
     game = games.get(room_id)
     if not game:
         return None
@@ -169,14 +195,15 @@ def retrieve_input_stack(room_id, input_stack, current_emoji=None):
     if not current_emoji:
         current_emoji = game["current_emoji"]
 
-    counts = Counter(input_stack)
+    if figured_out_sql:
+        return uploaddatatosql(game["language"], current_emoji, input_stack)
 
+    counts = Counter(input_stack)
     existing = game["answer_counts"].get(current_emoji)
     if existing is None:
         game["answer_counts"][current_emoji] = counts
     else:
         existing.update(counts)
-
     return game["answer_counts"][current_emoji]
 
 

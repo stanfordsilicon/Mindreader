@@ -87,6 +87,12 @@ function App() {
 
     try {
       // Call the Supabase RPC function to increment the counts for each keyword
+      if (!supabase) {
+        setError('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.');
+        setIsSubmitting(false);
+        return;
+      }
+
       const { error: supabaseError } = await supabase
         .rpc('increment_keyword_counts', {
           p_emoji: currentEmoji,
