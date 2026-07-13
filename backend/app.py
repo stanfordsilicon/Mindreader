@@ -71,7 +71,7 @@ def create_room():
     if SinglePlayerOnlyForNow:
         room_id = "1"
     games[room_id] = new_game(language)
-    return flask.jsonify({"room_id": room_id})
+    return flask.jsonify({"room_id": room_id, "emoji": games[room_id]["current_emoji"]})
 
 
 @app.route('/poststart') 
