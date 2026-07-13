@@ -87,11 +87,11 @@ function App() {
 
     try {
       // Call the Supabase RPC function to increment the counts for each keyword
-      if (!supabase) {
-        setError('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your .env file.');
-        setIsSubmitting(false);
-        return;
-      }
+      const response = await fetch(`${API_BASE_URL}/1/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords: filledKeywords }),
+      });
 
       const { error: supabaseError } = await supabase
         .rpc('increment_keyword_counts', {
