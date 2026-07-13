@@ -38,13 +38,22 @@ function App() {
   If the emoji fails to load, then an error message will be displayed.
   */
   const handleRevealEmoji = async () => {
-    setIsLoading(true); 
-    setError(''); 
+    setIsLoading(true);
+    setError('');
     setSubmitSuccess(false);
 
     try {
-      const emoji = await fetchRandomEmoji(); // Fetches a random emoji from the server
-      setCurrentEmoji(emoji);
+      const roomResponse = await fetch(`${API_BASE_URL}/create_room`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: inputLanguage || 'en' }),
+      });
+      if (!roomResponse.ok) {
+        throw new Error('Could not start a new room.');
+      }
+      const roomData = await roomResponse.json();
+
+      setCurrentEmoji(roomData.emoji);
       setKeywords(['', '', '', '']);
       setTimeLeft(30);
       setShowEmoji(true);

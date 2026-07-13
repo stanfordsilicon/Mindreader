@@ -7,10 +7,12 @@ import time
 import uuid
 import os
 from dotenv import load_dotenv
+from flask_cors import CORS
 
 load_dotenv()
 
 app = flask.Flask(__name__)
+CORS(app)  # add this line
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -142,7 +144,6 @@ def start_round(room_id):
     game["state"] = "playing"
     return flask.jsonify({"emoji": game["current_emoji"], "round": game["round"]})
 
-@app.route("/<room_id>/submit", methods=["POST"])
 @app.route("/<room_id>/submit", methods=["POST"])
 def submit_keywords(room_id):
     game = games.get(room_id)
