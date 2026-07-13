@@ -143,6 +143,7 @@ def start_round(room_id):
     return flask.jsonify({"emoji": game["current_emoji"], "round": game["round"]})
 
 @app.route("/<room_id>/submit", methods=["POST"])
+@app.route("/<room_id>/submit", methods=["POST"])
 def submit_keywords(room_id):
     game = games.get(room_id)
     if not game:
@@ -150,28 +151,20 @@ def submit_keywords(room_id):
 
     data = flask.request.get_json(silent=True) or {}
     keywords = data.get("keywords")
-    player_id = data.get("player_id", "player1")  # placeholder until multiplayer exists
 
     if not keywords or not isinstance(keywords, list):
         return flask.jsonify({"error": "keywords must be a non-empty list"}), 400
 
-    # filter out blanks, same rule your frontend already enforces
     input_stack = [kw.strip() for kw in keywords if isinstance(kw, str) and kw.strip()]
     if not input_stack:
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
 
-    game["submissions"][player_id] = input_stack
-
     try:
-        result = retrieve_input_stack(room_id, input_stack, game["current_emoji"])
+        retrieve_input_stack(room_id, input_stack)  # emoji resolved internally now
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
-    return flask.jsonify({
-        "message": "Keywords submitted",
-        "emoji": game["current_emoji"],
-        "submitted_count": len(game["submissions"]),
-    })
+    return flask.jsonify({"message": "Keywords submitted"})
 
 # -- Here be the code to calculate scores for each player, implement upon multiplayer
 """ 
