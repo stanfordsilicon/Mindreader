@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient';
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:8000'; // adjust for your deployed URL later
@@ -89,7 +88,7 @@ function App() {
     });
   };
 
-  /* The "handleSubmit" function saves the emoji and keywords to the Supabase database. */
+  /* The "handleSubmit" function saves the emoji and keywords to the database. */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
