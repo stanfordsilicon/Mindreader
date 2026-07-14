@@ -161,7 +161,7 @@ def submit_keywords(room_id):
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
 
     try:
-        uploaddatatosql(game["language"], current_emoji, input_stack)
+        retrieve_input_stack(room_id, input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
