@@ -25,17 +25,13 @@ migrate = Migrate(app, db)
 
 SinglePlayerOnlyForNow = True #Switch for later, for now, we will only allow single player games, but later we will allow multiplayer games
 #Thus, until we have implemented multiplayer, the room_id can be hardcoded to "1" for now, which will cause a lot less confusion for now
-figured_out_sql = True
+figured_out_sql = True #'switch for later (retrieve_input_stack), for now, we will just store the data in a dictionary, but later we will store it in a SQL database
 language = ""
 seconds_per_round = 30
 
 #-------#
-
-def load_emojis(path="emoji_list.txt"):
-    with open(path, "r", encoding="utf-8") as f:
-        return [line.strip().strip("',\" ") for line in f if line.strip()]
 #The above simply returns a list of emojis from the emoji_list.txt file, which is stored in the same directory as this file
-emoji_list = load_emojis()
+emoji_list = ["‼️", "☀️", "☕"]
 
 
 games = {}  #dict to store diffetent ongoing games, more useful for multiplayer games
@@ -59,9 +55,6 @@ def new_game(language="en"):
 @app.route('/') # starting page
 def start_page():
     return flask.render_template('start.html') # create html file named start 
-# -- merge the abovementioned start.html file with the start page that Hui Ying is working on, 
-# -- and make sure to include the options to select the time selection the language, and merge it with the option to start
-
  
 @app.route("/create_room", methods=["POST"])
 def create_room():
@@ -161,7 +154,7 @@ def submit_keywords(room_id):
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
 
     try:
-        uploaddatatosql(game["language"], current_emoji, input_stack)
+        retrieve_input_stack(room_id, input_stack)  # emoji resolved internally now
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 

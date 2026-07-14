@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { fetchRandomEmoji } from './api';
 import { supabase } from './supabaseClient';
 import './App.css';
 
@@ -51,9 +50,17 @@ function App() {
       if (!roomResponse.ok) {
         throw new Error('Could not start a new room.');
       }
-      const roomData = await roomResponse.json();
 
-      setCurrentEmoji(roomData.emoji);
+      const roomData = await roomResponse.json().catch(() => ({}));
+      const emoji = typeof roomData.emoji === 'string' && roomData.emoji
+        ? roomData.emoji
+        : '';
+
+      if (!emoji) {
+        throw new Error('Backend did not return an emoji for the room.');
+      }
+
+      setCurrentEmoji(emoji);
       setKeywords(['', '', '', '']);
       setTimeLeft(30);
       setShowEmoji(true);
