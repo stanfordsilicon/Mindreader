@@ -25,7 +25,7 @@ migrate = Migrate(app, db)
 
 SinglePlayerOnlyForNow = True #Switch for later, for now, we will only allow single player games, but later we will allow multiplayer games
 #Thus, until we have implemented multiplayer, the room_id can be hardcoded to "1" for now, which will cause a lot less confusion for now
-figured_out_sql = True #'switch for later (retrieve_input_stack), for now, we will just store the data in a dictionary, but later we will store it in a SQL database
+figured_out_sql = True
 language = ""
 seconds_per_round = 30
 
@@ -161,7 +161,7 @@ def submit_keywords(room_id):
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
 
     try:
-        retrieve_input_stack(room_id, input_stack)  # emoji resolved internally now
+        uploaddatatosql(game["language"], current_emoji, input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
