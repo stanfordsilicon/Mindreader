@@ -3,6 +3,8 @@ import { fetchRandomEmoji } from './api';
 import { supabase } from './supabaseClient';
 import './App.css';
 
+const API_BASE_URL = 'http://localhost:8000'; // adjust for your deployed URL later
+
 function App() {
   const [showEmoji, setShowEmoji] = useState(false); // Whether the emoji is being displayed (starts as false, then becomes true when the emoji is revealed)
   const [currentEmoji, setCurrentEmoji] = useState(''); // The current emoji that is being displayed (starts as an empty string, then becomes the revealed emoji)
@@ -36,13 +38,22 @@ function App() {
   If the emoji fails to load, then an error message will be displayed.
   */
   const handleRevealEmoji = async () => {
-    setIsLoading(true); 
-    setError(''); 
+    setIsLoading(true);
+    setError('');
     setSubmitSuccess(false);
 
     try {
-      const emoji = await fetchRandomEmoji(); // Fetches a random emoji from the server
-      setCurrentEmoji(emoji);
+      const roomResponse = await fetch(`${API_BASE_URL}/create_room`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: inputLanguage || 'en' }),
+      });
+      if (!roomResponse.ok) {
+        throw new Error('Could not start a new room.');
+      }
+      const roomData = await roomResponse.json();
+
+      setCurrentEmoji(roomData.emoji);
       setKeywords(['', '', '', '']);
       setTimeLeft(30);
       setShowEmoji(true);
@@ -74,8 +85,7 @@ function App() {
   /* The "handleSubmit" function saves the emoji and keywords to the Supabase database. */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    
-    // Basic validation to ensure at least one keyword is filled
+
     const filledKeywords = keywords.filter(kw => kw.trim() !== '');
     if (filledKeywords.length === 0) {
       setError('Please fill out at least one keyword before submitting.');
@@ -86,14 +96,16 @@ function App() {
     setError('');
 
     try {
-      // Call the Supabase RPC function to increment the counts for each keyword
-      const { error: supabaseError } = await supabase
-        .rpc('increment_keyword_counts', {
-          p_emoji: currentEmoji,
-          p_keywords: filledKeywords
-        });
+      const response = await fetch(`${API_BASE_URL}/1/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords: filledKeywords }),
+      });
 
-      if (supabaseError) throw supabaseError;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save keywords.');
+      }
 
       setSubmitSuccess(true);
     } catch (err) {

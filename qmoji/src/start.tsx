@@ -3,6 +3,7 @@ import { useState } from "react";
 export default function StartMenu() {
   const [Seconds_per_round, setSeconds_per_round] = useState(10);
   const [language, setLanguage] = useState("Type your language here");
+  const [players] = useState<string[]>([]);
 
   const handleStart = async () => {
     const res = await fetch("/", {
