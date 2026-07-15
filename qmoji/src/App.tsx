@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:8000'; // adjust for your deployed URL later
+const API_BASE_URL =import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
 function App() {
   const [showEmoji, setShowEmoji] = useState(false); // Whether the emoji is being displayed (starts as false, then becomes true when the emoji is revealed)
