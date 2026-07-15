@@ -1,5 +1,6 @@
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '');
 const EMOJI_API_URL =
-  import.meta.env.VITE_EMOJI_API_URL ?? '/api/index';
+  import.meta.env.VITE_EMOJI_API_URL ?? `${API_BASE_URL}/api/index`;
 
 type EmojiResponse = {
   message?: string;
