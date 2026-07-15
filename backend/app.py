@@ -161,7 +161,7 @@ def submit_keywords(room_id):
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
 
     try:
-        retrieve_input_stack(room_id, input_stack)
+        uploaddatatosql(game["language"], current_emoji, input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
@@ -178,27 +178,8 @@ def scoringSystem(room_id):
     pass
     #send out the jsonified files to the frontend, to display to user and create dopamine
 """
-    #for now, stores the amount of guesses per keyword and keywords in a dict
     # -- would probably be faster to delete this once uploadtodatatosql is implemented
     # -- Also, include scored for the word from scoringSystem()
-def retrieve_input_stack(room_id, input_stack, current_emoji=None):
-    game = games.get(room_id)
-    if not game:
-        return None
-
-    if not current_emoji:
-        current_emoji = game["current_emoji"]
-
-    if figured_out_sql:
-        return uploaddatatosql(game["language"], current_emoji, input_stack)
-
-    counts = Counter(input_stack)
-    existing = game["answer_counts"].get(current_emoji)
-    if existing is None:
-        game["answer_counts"][current_emoji] = counts
-    else:
-        existing.update(counts)
-    return game["answer_counts"][current_emoji]
 
 
 class Room(db.Model):
@@ -206,7 +187,7 @@ class Room(db.Model):
     id = db.Column(db.String(4), primary_key=True)
     state = db.Column(db.String(20), default="waiting")
     round = db.Column(db.Integer, default=0)
-    language = db.Column(db.String(10), default="en")
+    language = db.Column(db.String(10), default="English")
     current_emoji = db.Column(db.String(10, collation="utf8mb4_unicode_ci"))
 
     players = db.relationship("Player", backref="room", cascade="all, delete-orphan")
@@ -263,4 +244,4 @@ if __name__ == "__main__":
     app.run(debug=True, port=8000)
 
 
-# -- for post-summer: implement a flagging system for inappropriate content
+# -- for post-summer: implement a flagging system for inappropriate content or something like that
