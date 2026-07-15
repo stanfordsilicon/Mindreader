@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { fetchRandomEmoji } from './api';
+import { supabase } from './supabaseClient';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:8000'; // adjust for your deployed URL later
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '');
 
 function App() {
   const [showEmoji, setShowEmoji] = useState(false); // Whether the emoji is being displayed (starts as false, then becomes true when the emoji is revealed)
@@ -50,15 +52,7 @@ function App() {
         throw new Error('Could not start a new room.');
       }
 
-      const roomData = await roomResponse.json().catch(() => ({}));
-      const emoji = typeof roomData.emoji === 'string' && roomData.emoji
-        ? roomData.emoji
-        : '';
-
-      if (!emoji) {
-        throw new Error('Backend did not return an emoji for the room.');
-      }
-
+      const emoji = await fetchRandomEmoji();
       setCurrentEmoji(emoji);
       setKeywords(['', '', '', '']);
       setTimeLeft(30);
@@ -88,7 +82,7 @@ function App() {
     });
   };
 
-  /* The "handleSubmit" function saves the emoji and keywords to the database. */
+  /* The "handleSubmit" function saves the emoji and keywords to the Supabase database. */
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -145,7 +139,7 @@ function App() {
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
-        <h1>Welcome to QMoji!</h1>
+        <h1>Welcome to Qmoji!</h1>
         <p>
           Describe the emoji with up to four keywords in 30 seconds! 
           New game modes coming soon.
