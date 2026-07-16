@@ -12,7 +12,7 @@ from flask_cors import CORS
 load_dotenv()
 
 app = flask.Flask(__name__)
-CORS(app)  # add this line
+CORS(app, origins=["https://qmoji-webapp.vercel.app"])  
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -31,7 +31,9 @@ seconds_per_round = 30
 
 #-------#
 
-def load_emojis(path="emoji_list.txt"):
+def load_emojis(path=None):
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "emoji_list.txt")
     with open(path, "r", encoding="utf-8") as f:
         return [line.strip().strip("',\" ") for line in f if line.strip()]
 #The above simply returns a list of emojis from the emoji_list.txt file, which is stored in the same directory as this file
@@ -131,6 +133,7 @@ def get_state(room_id):
         "submitted_count": len(game["submissions"]),
         "total_players": len(game["players"]),
     })
+
 @app.route("/<room_id>/start_round", methods=["POST"])
 def start_round(room_id):
     #updates the game state for the next round, and sends it to the frontend
@@ -161,7 +164,7 @@ def submit_keywords(room_id):
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
 
     try:
-        uploaddatatosql(game["language"], current_emoji, input_stack)
+        uploaddatatosql(game["language"], game["current_emoji"], input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
