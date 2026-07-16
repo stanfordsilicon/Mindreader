@@ -111,8 +111,6 @@ def sendEmoji():
     return flask.jsonify({"message": rand})
 #The above and below functions send out the current emoji and the time per round respectively
 # to the frontend, so that the frontend can display it to the user
-def sendTimeController():
-    return flask.jsonify({"seconds_per_round": seconds_per_round})
 
 
 @app.route("/<room_id>/state", methods=["GET"])

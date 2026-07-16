@@ -85,7 +85,7 @@ sam deploy --guided \
   RDSPort=3306 \
   RDSDatabase=gamedb \
   RDSUsername=admin \
-  RDSPassword=Yz781016
+  RDSPassword=Password #Wrong_password
 ```
 
 ### Step 3: Configure API CORS (if needed)
