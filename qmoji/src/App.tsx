@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchRandomEmoji } from './api';
 import './App.css';
+import Start from './Start';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
 
@@ -138,34 +139,18 @@ function App() {
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
-        <h1>Welcome to Qmoji!</h1>
+        <h1>Welcome to Qmoji! !Testing!!!!</h1>
         <p>
           Describe the emoji with up to four keywords in 30 seconds! 
           New game modes coming soon.
         </p>
         {!showEmoji && (
-          <div className="language-selector" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <label htmlFor="language-input" style={{ fontSize: '0.95rem', color: 'var(--text-h)' }}>
-              What language will you be using for your keywords?
-            </label>
-            <input
-              id="language-input"
-              type="text"
-              value={inputLanguage}
-              onChange={(e) => setInputLanguage(e.target.value)}
-              placeholder="e.g. English, Spanish, etc."
-              style={{ 
-                padding: '10px 14px', 
-                borderRadius: '10px', 
-                border: '1px solid var(--border)', 
-                background: 'var(--bg)', 
-                color: 'var(--text-h)', 
-                font: 'inherit',
-                textAlign: 'center',
-                minWidth: '240px'
-              }}
-            />
-          </div>
+          <Start
+            inputLanguage={inputLanguage}
+            setInputLanguage={setInputLanguage}
+            onReveal={handleRevealEmoji}
+            isLoading={isLoading}
+          />
         )}
       </header>
 
