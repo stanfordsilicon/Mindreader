@@ -1,33 +1,41 @@
-import { useState } from "react";
+type StartValues = {
+  inputLanguage: string;
+  setInputLanguage: (value: string) => void;
+  onReveal: () => void;
+  isLoading: boolean;
+};
 
-export default function StartMenu() {
-  const [Seconds_per_round, setSeconds_per_round] = useState(10);
-  const [language, setLanguage] = useState("Type your language here");
-  const [players] = useState<string[]>([]);
-
-  const handleStart = async () => {
-    const res = await fetch("/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ players, language }),
-    });
-    const data = await res.json();
-    console.log(data);
+function Start({ inputLanguage, setInputLanguage, onReveal, isLoading }: StartValues) {
+  const handleModeSelect = (mode: 'single' | 'multi') => {
+    if (mode === 'single') {
+      onReveal();
+    } else {
+      // The multiplayer routing
+      // navigate('multiplayer')
+    }
   };
+
   return (
-    <div>
-      <input
-        type="number"
-        value={Seconds_per_round}
-        onChange={(e) => setSeconds_per_round(Number(e.target.value))}
-      />
-      <input
-        type="text"
-        value={language}
-        onChange={(e) => setLanguage(e.target.value)}
-      />
-      <button onClick={handleStart}>Start</button>
-    </div>
+    <>
+      <div className="language-selector">
+        <label htmlFor="language-input">Language for your keywords?</label>
+        <input
+          id="language-input"
+          value={inputLanguage}
+          onChange={(e) => setInputLanguage(e.target.value)}
+        />
+      </div>
+
+      <section className="qmoji-stage">
+        <button onClick={() => handleModeSelect('single')} disabled={isLoading}>
+          {isLoading ? 'Loading emoji...' : 'Singleplayer'}
+        </button>
+        <button onClick={() => handleModeSelect('multi')}>
+          Multiplayer
+        </button>
+      </section>
+    </>
   );
 }
 
+export default Start;
