@@ -1,11 +1,11 @@
-type startValues = {
+type StartValues = {
   inputLanguage: string;
   setInputLanguage: (value: string) => void;
   onReveal: () => void;
   isLoading: boolean;
 };
 
-function start({ inputLanguage, setInputLanguage, onReveal, isLoading }: startValues) {
+function Start({ inputLanguage, setInputLanguage, onReveal, isLoading }: StartValues) {
   const handleModeSelect = (mode: 'single' | 'multi') => {
     if (mode === 'single') {
       onReveal();
@@ -38,4 +38,4 @@ function start({ inputLanguage, setInputLanguage, onReveal, isLoading }: startVa
   );
 }
 
-export default start;
+export default Start;

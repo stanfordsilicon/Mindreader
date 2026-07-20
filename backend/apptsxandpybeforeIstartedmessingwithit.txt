@@ -1,0 +1,549 @@
+#app.tsx
+
+import { useState, useEffect } from 'react';
+import { fetchRandomEmoji } from './api';
+import './App.css';
+
+const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
+
+function App() {
+  const [showEmoji, setShowEmoji] = useState(false); // Whether the emoji is being displayed (starts as false, then becomes true when the emoji is revealed)
+  const [currentEmoji, setCurrentEmoji] = useState(''); // The current emoji that is being displayed (starts as an empty string, then becomes the revealed emoji)
+  const [keywords, setKeywords] = useState(['', '', '', '']); // The keywords that the user has entered (starts as a list of empty strings, then gets updated with the user's keywords)
+  const [inputLanguage, setInputLanguage] = useState('English'); // The language the user will be inputting keywords in
+  const [isLoading, setIsLoading] = useState(false); // Whether the emoji is being loaded (starts as false, then becomes true when the emoji is being loaded)
+  const [isSubmitting, setIsSubmitting] = useState(false); // Whether the data is being saved to the database
+  const [submitSuccess, setSubmitSuccess] = useState(false); // Whether the data was successfully saved
+  const [error, setError] = useState(''); // Will display an error message if the emoji can't be loaded or saved
+  const [timeLeft, setTimeLeft] = useState(30); // Timer that limits how long users have to enter keywords
+
+  /* The useEffect hook handles the countdown timer functionality.
+  When the emoji is displayed and the time left is greater than 0, it decreases the time by 1 every second.
+  It stops counting down if the user successfully submits their keywords.
+  */
+  useEffect(() => {
+    let timer: number;
+    if (showEmoji && timeLeft > 0 && !submitSuccess) {
+      timer = window.setTimeout(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [showEmoji, timeLeft, submitSuccess]);
+
+  /* The "handleRevealEmoji" function handles the functionality of the "Show me an emoji!" button. When clicked,
+  it will set the loading state to true, clear any error messages, and then try to fetch a random emoji.
+  If the emoji loads successfully, then the user will be able to see the emoji and enter keywords to describe it.
+  If the emoji fails to load, then an error message will be displayed.
+  */
+  const handleRevealEmoji = async () => {
+    setIsLoading(true);
+    setError('');
+    setSubmitSuccess(false);
+
+    try {
+      const roomResponse = await fetch(`${API_BASE_URL}/create_room`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: inputLanguage || 'en' }),
+      });
+      if (!roomResponse.ok) {
+        throw new Error('Could not start a new room.');
+      }
+
+      const emoji = await fetchRandomEmoji();
+      setCurrentEmoji(emoji);
+      setKeywords(['', '', '', '']);
+      setTimeLeft(30);
+      setShowEmoji(true);
+    } catch (fetchError) {
+      const message =
+        fetchError instanceof Error
+          ? fetchError.message
+          : 'Could not load an emoji from the server.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /* The "handleKeywordChange" function handles the functionality of the keyword input fields. 
+  When the user types in a keyword, it will update the "keywords" state with the new keyword.
+  The "index" parameter is the index of the keyword that is being updated, 
+  and the "value" parameter is the new value of the keyword. The function creates a new list with the updated keyword,
+  and then updates the "keywords" state with the new list.
+  */
+  const handleKeywordChange = (index: number, value: string) => {
+    setKeywords((prev) => {
+      const next = [...prev]; // Creates a new list with the updated keyword
+      next[index] = value; // Updates the keyword at the specified index with the new value
+      return next; 
+    });
+  };
+
+  /* The "handleSubmit" function saves the emoji and keywords to the Supabase database. */
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const filledKeywords = keywords.filter(kw => kw.trim() !== '');
+    if (filledKeywords.length === 0) {
+      setError('Please fill out at least one keyword before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/1/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keywords: filledKeywords }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to save keywords.');
+      }
+
+      setSubmitSuccess(true);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save to database.';
+      setError(`Database Error: ${message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  /* The "handleTryAnother" function handles the functionality of the "Try another emoji" button.
+  When the button is clicked, it will reset the "showEmoji", "currentEmoji", "keywords", and "error" states to their initial values.
+  This will allow the user to reveal a new emoji and enter new keywords.
+  */
+  const handleTryAnother = () => {
+    setShowEmoji(false);
+    setCurrentEmoji('');
+    setKeywords(['', '', '', '']);
+    setTimeLeft(30);
+    setError('');
+    setSubmitSuccess(false);
+  };
+
+  /* The "return" statement returns the rendered UI of the game. 
+  It includes the header, the stage, the error message, and the keyword panel.
+  The header includes the title and the brief description of the game.
+  The stage includes the button to reveal an emoji and the emoji that is being displayed.
+  The error message is displayed if there is an error with the emoji (e.g. the emoji can't be loaded).
+  The keyword panel includes the prompt to describe the emoji, the input fields for the keywords, and the button to describe another emoji.
+  */
+  return (
+    <main className="qmoji-app">
+      <header className="qmoji-header">
+        <h1>Welcome to Qmoji!</h1>
+        <p>
+          Describe the emoji with up to four keywords in 30 seconds! 
+          New game modes coming soon.
+        </p>
+        {!showEmoji && (
+          <div className="language-selector" style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            <label htmlFor="language-input" style={{ fontSize: '0.95rem', color: 'var(--text-h)' }}>
+              What language will you be using for your keywords?
+            </label>
+            <input
+              id="language-input"
+              type="text"
+              value={inputLanguage}
+              onChange={(e) => setInputLanguage(e.target.value)}
+              placeholder="e.g. English, Spanish, etc."
+              style={{ 
+                padding: '10px 14px', 
+                borderRadius: '10px', 
+                border: '1px solid var(--border)', 
+                background: 'var(--bg)', 
+                color: 'var(--text-h)', 
+                font: 'inherit',
+                textAlign: 'center',
+                minWidth: '240px'
+              }}
+            />
+          </div>
+        )}
+      </header>
+
+      {error && (
+        <p className="qmoji-error" role="alert">
+          {error}
+        </p>
+      )}
+
+      {submitSuccess && (
+        <p className="qmoji-success" role="alert" style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}>
+          Successfully saved your keywords!
+        </p>
+      )}
+
+      {!showEmoji ? (
+        <section className="qmoji-stage" aria-live="polite">
+          <button
+            type="button"
+            className="reveal-button"
+            onClick={handleRevealEmoji}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Loading emoji...' : 'Show me an emoji!'}
+          </button>
+        </section>
+      ) : (
+        <div className="workspace-container">
+          <section className="qmoji-stage" aria-live="polite" style={{ flexDirection: 'column', gap: '24px' }}>
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: timeLeft <= 5 ? '#b42318' : 'var(--text-h)', textAlign: 'center' }}>
+              {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up!"}
+            </div>
+            <div className="emoji-display" aria-label="Random emoji">
+              <span className="emoji" role="img">
+                {currentEmoji}
+              </span>
+            </div>
+          </section>
+
+          <section className="keyword-panel" aria-labelledby="keyword-prompt">
+            <h2 id="keyword-prompt" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              What words come to mind for{' '}
+              <span className="emoji-inline" aria-hidden="true" style={{ fontSize: '1.2em' }}>
+                {currentEmoji}
+              </span>
+              ?
+            </h2>
+
+            <form className="keyword-form" onSubmit={handleSubmit}>
+              <div className="keyword-grid">
+                {keywords.map((keyword, index) => (
+                  <label key={index} className="keyword-field">
+                    Keyword {index + 1}
+                    <input
+                      type="text"
+                      value={keyword}
+                      placeholder={`Keyword ${index + 1}${inputLanguage.trim() ? ` (${inputLanguage.trim()})` : ''}`}
+                      onChange={(event) =>
+                        handleKeywordChange(index, event.target.value)
+                      }
+                      autoComplete="off"
+                      disabled={isSubmitting || submitSuccess || timeLeft === 0}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '16px', marginTop: '24px' }}>
+                {!submitSuccess && (
+                  <button 
+                    type="submit" 
+                    className="submit-button" 
+                    disabled={isSubmitting}
+                    style={{ flex: 1, padding: '12px 24px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '999px', cursor: 'pointer', font: 'inherit', fontWeight: 500 }}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Submit Keywords'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleTryAnother}
+                  style={{ flex: 1, margin: 0, width: submitSuccess ? '100%' : 'auto' }}
+                >
+                  Try another emoji
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+    </main>
+  );
+}
+
+export default App;
+
+
+
+
+
+
+
+
+
+
+
+
+
+#app.py
+
+import random
+import flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from collections import Counter
+import time
+import uuid
+import os
+from dotenv import load_dotenv
+from flask_cors import CORS
+
+load_dotenv()
+
+app = flask.Flask(__name__)
+CORS(app, origins=["https://qmoji-webapp.vercel.app"])  
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_recycle": 280,
+    "pool_pre_ping": True,
+}
+db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+SinglePlayerOnlyForNow = True #Switch for later, for now, we will only allow single player games, but later we will allow multiplayer games
+#Thus, until we have implemented multiplayer, the room_id can be hardcoded to "1" for now, which will cause a lot less confusion for now
+figured_out_sql = True
+language = ""
+seconds_per_round = 30
+
+#-------#
+
+def load_emojis(path=None):
+    if path is None:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "emoji_list.txt")
+    with open(path, "r", encoding="utf-8") as f:
+        return [line.strip().strip("',\" ") for line in f if line.strip()]
+#The above simply returns a list of emojis from the emoji_list.txt file, which is stored in the same directory as this file
+emoji_list = load_emojis()
+
+
+games = {}  #dict to store diffetent ongoing games, more useful for multiplayer games
+
+def new_game(language="en"):
+    return {
+        "state": "waiting",
+        "round": 0,
+        "language": language,
+        "current_emoji": random.choice(emoji_list) if emoji_list else None,
+        "players": [],
+        "scores": {},
+        "submissions": {},
+        "answer_counts": {}, 
+    }
+#The above function returns a new game dict with all the information of a new game
+
+# -- might be handy to implement per-player logs for inappropriate content removal and to check on messing with data
+#there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
+
+@app.route('/') # starting page
+def start_page():
+    return flask.render_template('start.html') # create html file named start 
+# -- merge the abovementioned start.html file with the start page that Hui Ying is working on, 
+# -- and make sure to include the options to select the time selection the language, and merge it with the option to start
+
+ 
+@app.route("/create_room", methods=["POST"])
+def create_room():
+    data = flask.request.get_json(silent=True) or {}
+    language = data.get("language", "en")
+    room_id = str(uuid.uuid4())[:4].upper() #changed to 4 characters because I remembered that jackbox room_id was also only 4 characters
+    if SinglePlayerOnlyForNow:
+        room_id = "1"
+    games[room_id] = new_game(language)
+    return flask.jsonify({"room_id": room_id, "emoji": games[room_id]["current_emoji"]})
+
+
+@app.route('/poststart') 
+def post_start():
+    return flask.render_template('poststart.html') # create html file named poststart
+# this is the page that will be redirected to after the start button is clicked, 
+# -- merge with Hui Ying's page
+
+def post_start_dataRetrieve():
+    data = flask.request.get_json(silent=True)
+    if not data or 'language' not in data or 'seconds_per_round' not in data:
+        return flask.jsonify({'error': 'Invalid data'}), 400
+    #here be the code to store that data, something along the line of:
+    global language, seconds_per_round
+    language = data['language']
+    seconds_per_round = data['seconds_per_round']
+#The above function is to retrieve the data from the poststart page, and store it in the global variables language and seconds_per_round
+
+#according to GPT, you could implement a multiplayer timer function using a websocket, but I still need to learn how that works
+#Here is what I have for now, but it is not working yet, and I will need to learn how to implement a websocket for this to work
+"""class RoundTimer:
+    def __init__(self):
+        self.start_time = None
+    def start(self):
+        self.start_time = time.time()
+    def get_remaining_time(self):
+        if self.start_time is None:
+            return seconds_per_round
+        elapsed_time = time.time() - self.start_time
+        return max(0, seconds_per_round - elapsed_time)"""
+
+@app.route("/api/index") # -- I dont know what the director should be, but this is the route for Hui Ying's tsx filex
+def sendEmoji():
+    rand = random.choice(emoji_list)
+    return flask.jsonify({"message": rand})
+#The above and below functions send out the current emoji and the time per round respectively
+# to the frontend, so that the frontend can display it to the user
+
+
+@app.route("/<room_id>/state", methods=["GET"])
+def get_state(room_id):
+    #retrieves the game state for the given room_id (all of the frontend information)
+    # and stores it in the games dictionary, which is a global variable that stores all the ongoing games per every round
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+ 
+    return flask.jsonify({
+        "state": game["state"],
+        "round": game["round"],
+        "language": game["language"],
+        "emoji": game["current_emoji"],
+        "players": game["players"],
+        "scores": game["scores"],
+        "submitted_count": len(game["submissions"]),
+        "total_players": len(game["players"]),
+    })
+
+@app.route("/<room_id>/start_round", methods=["POST"])
+def start_round(room_id):
+    #updates the game state for the next round, and sends it to the frontend
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    game["current_emoji"] = random.choice(emoji_list)
+    game["submissions"] = {}
+    game["round"] += 1
+    game["state"] = "playing"
+    return flask.jsonify({"emoji": game["current_emoji"], "round": game["round"]})
+
+@app.route("/<room_id>/submit", methods=["POST"])
+def submit_keywords(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    data = flask.request.get_json(silent=True) or {}
+    keywords = data.get("keywords")
+
+    if not keywords or not isinstance(keywords, list):
+        return flask.jsonify({"error": "keywords must be a non-empty list"}), 400
+
+    input_stack = [kw.strip() for kw in keywords if isinstance(kw, str) and kw.strip()]
+    if not input_stack:
+        return flask.jsonify({"error": "No valid keywords submitted"}), 400
+
+    try:
+        uploaddatatosql(game["language"], game["current_emoji"], input_stack)
+    except Exception as e:
+        return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
+
+    return flask.jsonify({"message": "Keywords submitted"})
+
+# -- Here be the code to calculate scores for each player, implement upon multiplayer
+""" 
+def scoringSystem(room_id):
+    pass
+    #some code to calculate the scores for each player based on the data from the games dict, create other 
+    #dict which shall be stored by retrieve_input_stack() for internal score keeping
+
+#def send_out_scores():
+    pass
+    #send out the jsonified files to the frontend, to display to user and create dopamine
+"""
+    # -- would probably be faster to delete this once uploadtodatatosql is implemented
+    # -- Also, include scored for the word from scoringSystem()
+
+
+class Room(db.Model):
+    __tablename__ = "rooms"
+    id = db.Column(db.String(4), primary_key=True)
+    state = db.Column(db.String(20), default="waiting")
+    round = db.Column(db.Integer, default=0)
+    language = db.Column(db.String(10), default="English")
+    current_emoji = db.Column(db.String(10, collation="utf8mb4_unicode_ci"))
+
+    players = db.relationship("Player", backref="room", cascade="all, delete-orphan")
+    submissions = db.relationship("Submission", backref="room", cascade="all, delete-orphan")
+
+
+class Player(db.Model):
+    __tablename__ = "players"
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.String(4), db.ForeignKey("rooms.id"))
+    name = db.Column(db.String(50))
+    score = db.Column(db.Integer, default=0)
+
+
+class Submission(db.Model):
+    __tablename__ = "submissions"
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.String(4), db.ForeignKey("rooms.id"))
+    player_id = db.Column(db.Integer, db.ForeignKey("players.id"))
+    emoji = db.Column(db.String(10, collation="utf8mb4_unicode_ci"))
+    guess = db.Column(db.String(100))
+    round = db.Column(db.Integer)
+
+
+class AnswerCount(db.Model):
+    __tablename__ = "answer_counts"
+    id = db.Column(db.Integer, primary_key=True)
+    language = db.Column(db.String(10))
+    emoji = db.Column(db.String(10, collation="utf8mb4_unicode_ci"))
+    word = db.Column(db.String(100))
+    count = db.Column(db.Integer, default=0)
+
+    __table_args__ = (
+        db.UniqueConstraint("language", "emoji", "word", name="uq_answer"),
+        db.Index("idx_lang_emoji", "language", "emoji"),
+    )
+
+
+
+def uploaddatatosql(language, emoji, input_stack):
+    counts = Counter(input_stack)
+    for word, n in counts.items():
+        row = AnswerCount.query.filter_by(
+            language=language, emoji=emoji, word=word
+        ).first()
+        if row:
+            row.count += n
+        else:
+            db.session.add(AnswerCount(language=language, emoji=emoji, word=word, count=n))
+    db.session.commit()
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=8000)
+
+
+# -- for post-summer: implement a flagging system for inappropriate content or something like that
+
+
+
+
+
+
+#main.tsx
+
+
+
+
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
