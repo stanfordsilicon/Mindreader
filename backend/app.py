@@ -15,7 +15,8 @@ load_dotenv()
 app = flask.Flask(__name__)
 CORS(app, origins=[
     "https://qmoji-webapp.vercel.app",
-    "http://localhost:5173",  # Vite dev server, local development only
+    "https://qmoji-webapp-.*-silicons-projects-9fd9ab07\.vercel\.app",
+    "http://localhost:5173",
 ])
 
 # --- MongoDB connection ---
