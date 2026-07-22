@@ -99,8 +99,8 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/1/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords: filledKeywords }),
-      });
+       body: JSON.stringify({ keywords: filledKeywords, user_id: getUserId() }),  
+    });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -129,6 +129,14 @@ function App() {
     setSubmitSuccess(false);
   };
 
+  const getUserId = () => {
+    let id = localStorage.getItem('qmoji_user_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('qmoji_user_id', id);
+    }
+    return id;
+  };
   /* The "return" statement returns the rendered UI of the game. 
   It includes the header, the stage, the error message, and the keyword panel.
   The header includes the title and the brief description of the game.
