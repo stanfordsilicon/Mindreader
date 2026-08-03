@@ -80,11 +80,11 @@ def new_game(language="en"):
 # there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
 
 
-@app.route('/')  # starting page
+"""@app.route('/')  # starting page
 def start_page():
     return flask.render_template('start.html')  # create html file named start
 # -- merge the abovementioned start.html file with the start page that Hui Ying is working on,
-# -- and make sure to include the options to select the time selection the language, and merge it with the option to start
+# -- and make sure to include the options to select the time selection the language, and merge it with the option to start"""
 
 
 @app.route("/create_room", methods=["POST"])
@@ -110,12 +110,6 @@ def create_room():
 
     return flask.jsonify({"room_id": room_id, "emoji": games[room_id]["current_emoji"]})
 
-
-@app.route('/poststart')
-def post_start():
-    return flask.render_template('poststart.html')  # create html file named poststart
-# this is the page that will be redirected to after the start button is clicked,
-# -- merge with Hui Ying's page
 
 
 def post_start_dataRetrieve():
@@ -281,7 +275,8 @@ def update_answer_counts(language, emoji, input_stack):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
 
 
 # -- for post-summer: implement a flagging system for inappropriate content or something like that
