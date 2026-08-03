@@ -1,7 +1,7 @@
 
 import { Routes, Route } from 'react-router-dom';
 import SingleplayerGame from './SingleplayerGame';
-import MultiplayerLobby from './Multiplayerlobby';
+import Multiplayerlobby from './Multiplayerlobby';
 import Room from './Room';
 import './App.css';
 
