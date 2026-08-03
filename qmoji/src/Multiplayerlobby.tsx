@@ -1,5 +1,5 @@
-function MultiplayerLobby() {
+function Multiplayerlobby() {
   return <div>Multiplayer lobby coming soon.</div>;
 }
 
-export default MultiplayerLobby;
+export default Multiplayerlobby;
