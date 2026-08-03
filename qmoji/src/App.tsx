@@ -52,12 +52,12 @@ function App() {
         throw new Error('Could not start a new room.');
       }
 
-      const emoji = await fetchRandomEmoji();
+      const {emoji } = await roomResponse.json();
       setCurrentEmoji(emoji);
       setKeywords(['', '', '', '']);
       setTimeLeft(30);
       setShowEmoji(true);
-    } catch (fetchError) {
+          } catch (fetchError) {
       const message =
         fetchError instanceof Error
           ? fetchError.message
