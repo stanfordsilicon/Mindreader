@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { fetchRandomEmoji } from './api';
 import './App.css';
 import Start from './Start';
 
