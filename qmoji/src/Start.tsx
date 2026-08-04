@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+
 type StartValues = {
   inputLanguage: string;
   setInputLanguage: (value: string) => void;
@@ -6,12 +8,14 @@ type StartValues = {
 };
 
 function Start({ inputLanguage, setInputLanguage, onReveal, isLoading }: StartValues) {
+  const navigate = useNavigate();
   const handleModeSelect = (mode: 'single' | 'multi') => {
     if (mode === 'single') {
       onReveal();
+    } else if (mode === 'multi') {
+      navigate('/multiplayer');
     } else {
-      // The multiplayer routing
-      // navigate('multiplayer')
+        throw new Error('Neither singleplayer nor multiplayer selected.');
     }
   };
 

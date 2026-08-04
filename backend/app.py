@@ -80,23 +80,31 @@ def new_game(language="en"):
 # there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
 
 
-"""@app.route('/')  # starting page
+@app.route('/')  # starting page
 def start_page():
     return flask.render_template('start.html')  # create html file named start
 # -- merge the abovementioned start.html file with the start page that Hui Ying is working on,
-# -- and make sure to include the options to select the time selection the language, and merge it with the option to start"""
+# -- and make sure to include the options to select the time selection the language, and merge it with the option to start
 
 
 @app.route("/create_room", methods=["POST"])
 def create_room():
     data = flask.request.get_json(silent=True) or {}
     language = data.get("language", "en")
-    room_id = str(uuid.uuid4())[:4].upper()  # changed to 4 characters because I remembered that jackbox room_id was also only 4 characters
+    SinglePlayerOnlyForNow = data.get("single_player_only", True)
     if SinglePlayerOnlyForNow:
         room_id = "1"
+    else:
+        attempts = 0
+        max_attempts = 20
+        while room_id in games and attempts < max_attempts:
+            room_id = str(uuid.uuid4())[:4].upper()
+            attempts += 1
+        if room_id in games:
+            return flask.jsonify({"error": "Could not allocate a unique room ID, please try again."}), 503
+
     games[room_id] = new_game(language)
 
-    # Persist the room record in Mongo too, so it's queryable/inspectable outside memory
     rooms_col.update_one(
         {"_id": room_id},
         {"$set": {
@@ -147,11 +155,11 @@ def sendEmoji():
 
 @app.route("/<room_id>/state", methods=["GET"])
 def get_state(room_id):
-    # retrieves the game state for the given room_id (all of the frontend information)
-    # and stores it in the games dictionary, which is a global variable that stores all the ongoing games per every round
     game = games.get(room_id)
     if not game:
         return flask.jsonify({"error": "Room not found"}), 404
+    
+    submitted_user_ids = list(game["submissions"].keys())
 
     return flask.jsonify({
         "state": game["state"],
@@ -160,10 +168,37 @@ def get_state(room_id):
         "emoji": game["current_emoji"],
         "players": game["players"],
         "scores": game["scores"],
-        "submitted_count": len(game["submissions"]),
+        "submitted_user_ids": submitted_user_ids,
+        "submitted_count": len(submitted_user_ids),
         "total_players": len(game["players"]),
     })
 
+@app.route("/<room_id>/join", methods=["POST"])
+def join_room(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    data = flask.request.get_json(silent=True) or {}
+    username = data.get("username")
+    user_id = data.get("user_id")
+
+    if not username or not user_id:
+        return flask.jsonify({"error": "user_id and username are required"}), 400
+
+    player_exists = any(p["user_id"] == user_id for p in game["players"])
+    if not player_exists:
+        player_data = {"user_id": user_id, "name": username}
+        game["players"].append(player_data)
+        game["scores"][user_id] = game["scores"].get(user_id, 0)
+
+        players_col.update_one(
+            {"_id": f"{room_id}_{user_id}"},
+            {"$set": {"room_id": room_id, "user_id": user_id, "name": username, "score": game["scores"][user_id]}},
+            upsert=True
+        )
+
+    return flask.jsonify({"message": "Joined successfully", "players": game["players"]})
 
 @app.route("/<room_id>/start_round", methods=["POST"])
 def start_round(room_id):
