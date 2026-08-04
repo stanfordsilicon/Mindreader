@@ -80,13 +80,6 @@ def new_game(language="en"):
 # there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
 
 
-@app.route('/')  # starting page
-def start_page():
-    return flask.render_template('start.html')  # create html file named start
-# -- merge the abovementioned start.html file with the start page that Hui Ying is working on,
-# -- and make sure to include the options to select the time selection the language, and merge it with the option to start
-
-
 @app.route("/create_room", methods=["POST"])
 def create_room():
     data = flask.request.get_json(silent=True) or {}
@@ -95,6 +88,7 @@ def create_room():
     if SinglePlayerOnlyForNow:
         room_id = "1"
     else:
+        room_id = str(uuid.uuid4())[:4].upper()
         attempts = 0
         max_attempts = 20
         while room_id in games and attempts < max_attempts:
