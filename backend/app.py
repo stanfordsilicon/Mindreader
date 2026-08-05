@@ -75,6 +75,28 @@ def new_game(language="en"):
     }
     # The above function returns a new game dict with all the information of a new game
 
+def save_submission(room_id, user_id, language, emoji, round_num, keywords):
+    # Stores the raw submission exactly as received, tagged with who submitted it.
+    submissions_col.insert_one({
+        "room_id": room_id,
+        "user_id": user_id,
+        "language": language,
+        "emoji": emoji,
+        "round": round_num,
+        "keywords": keywords,
+        "submitted_at": time.time(),
+    })
+
+
+def update_answer_counts(language, emoji, input_stack):
+    # Rolls the submitted keywords into the running per-word tally.
+    counts = Counter(input_stack)
+    for word, n in counts.items():
+        answer_counts_col.update_one(
+            {"language": language, "emoji": emoji, "word": word},
+            {"$inc": {"count": n}},
+            upsert=True,
+        )
 
 # -- might be handy to implement per-player logs for inappropriate content removal and to check on messing with data
 # there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
@@ -86,7 +108,8 @@ def create_room():
     language = data.get("language", "en")
     SinglePlayerOnlyForNow = data.get("single_player_only", True)
     if SinglePlayerOnlyForNow:
-        room_id = "1"
+        room_id = "SinglePlayerRoom"
+
     else:
         room_id = str(uuid.uuid4())[:4].upper()
         attempts = 0
@@ -98,6 +121,9 @@ def create_room():
             return flask.jsonify({"error": "Could not allocate a unique room ID, please try again."}), 503
 
     games[room_id] = new_game(language)
+    if SinglePlayerOnlyForNow:
+        games[room_id]["state"] = "playing"
+        games[room_id]["round"] = 1
 
     rooms_col.update_one(
         {"_id": room_id},
@@ -105,7 +131,6 @@ def create_room():
             "state": games[room_id]["state"],
             "round": games[room_id]["round"],
             "language": games[room_id]["language"],
-            "current_emoji": games[room_id]["current_emoji"],
         }},
         upsert=True,
     )
@@ -118,7 +143,6 @@ def post_start_dataRetrieve():
     data = flask.request.get_json(silent=True)
     if not data or 'language' not in data or 'seconds_per_round' not in data:
         return flask.jsonify({'error': 'Invalid data'}), 400
-    # here be the code to store that data, something along the line of:
     global language, seconds_per_round
     language = data['language']
     seconds_per_round = data['seconds_per_round']
@@ -279,28 +303,7 @@ def scoringSystem(room_id):
 #   (aggregated tally, unique on (language, emoji, word) via the "uq_answer" index above)
 
 
-def save_submission(room_id, user_id, language, emoji, round_num, keywords):
-    # Stores the raw submission exactly as received, tagged with who submitted it.
-    submissions_col.insert_one({
-        "room_id": room_id,
-        "user_id": user_id,
-        "language": language,
-        "emoji": emoji,
-        "round": round_num,
-        "keywords": keywords,
-        "submitted_at": time.time(),
-    })
 
-
-def update_answer_counts(language, emoji, input_stack):
-    # Rolls the submitted keywords into the running per-word tally.
-    counts = Counter(input_stack)
-    for word, n in counts.items():
-        answer_counts_col.update_one(
-            {"language": language, "emoji": emoji, "word": word},
-            {"$inc": {"count": n}},
-            upsert=True,
-        )
 
 
 if __name__ == "__main__":

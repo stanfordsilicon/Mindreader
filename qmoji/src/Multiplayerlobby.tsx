@@ -99,7 +99,7 @@ export const Multiplayerlobby: React.FC = () => {
       setIsLoading(false);
     }
   };
-
+// below is more vibecoded
   return (
     <div className="lobby-container" style={{ maxWidth: '420px', margin: '3rem auto', padding: '1rem' }}>
       <h1>Qmoji Multiplayer</h1>
