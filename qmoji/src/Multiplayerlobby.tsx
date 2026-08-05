@@ -136,7 +136,7 @@ export const Multiplayerlobby: React.FC = () => {
             type="text"
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            placeholder="e.g. en"
+            placeholder="no language selected"
             autoComplete="off"
             disabled={isLoading}
           />
