@@ -271,6 +271,19 @@ def submit_keywords(room_id):
             round_num=game["round"],
             keywords=input_stack,
         )
+
+        """save_all_submission(.   #item for implementation of emoji-based database storage, but for now, we will just store the data in the submissions collection
+            room_id=room_id,
+            user_id=user_id,
+            language=game["language"],
+            emoji=game["current_emoji"],
+            round_num=game["round"],
+            keywords=input_stack,
+        )"""
+
+        update_answer_counts(game["language"], game["current_emoji"], input_stack)
+        game["submissions"][user_id] = input_stack
+
         update_answer_counts(game["language"], game["current_emoji"], input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
