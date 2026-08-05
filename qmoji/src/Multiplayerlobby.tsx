@@ -134,12 +134,12 @@ export const Multiplayerlobby: React.FC = () => {
           <label style={{ marginRight: '0.5rem' }}>Language: </label>
           <input
             type="text"
-            value={keyword}
-            placeholder={`Keyword ${index + 1}${inputLanguage.trim() ? ` (${inputLanguage.trim()})` : ''}`}
-            onChange={(event) => handleKeywordChange(index, event.target.value)}
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            placeholder="e.g. en"
             autoComplete="off"
-            disabled={isSubmitting || submitSuccess || timeLeft === 0}
-        />
+            disabled={isLoading}
+          />
         </div>
         <button 
           onClick={handleCreateRoom} 
