@@ -20,7 +20,7 @@ type RoomState = {
 export default function Room() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-
+  
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [hasJoined, setHasJoined] = useState(false);
   const [error, setError] = useState('');
@@ -28,7 +28,7 @@ export default function Room() {
 
   const userId = localStorage.getItem('qmoji_user_id');
   const username = localStorage.getItem('qmoji_username');
-
+  
   const [keywords, setKeywords] = useState(['', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,17 +36,15 @@ export default function Room() {
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
 
-  // Identify host dynamically (first player in room list)
+  // Derive host status dynamically (first player in list)
   const isHost = Boolean(roomState?.players[0]?.user_id && roomState.players[0].user_id === userId);
 
-  // Redirect to lobby if missing authentication or room parameters
   useEffect(() => {
     if (!roomId || !userId || !username) {
       navigate('/multiplayer');
     }
   }, [roomId, userId, username, navigate]);
 
-  // Join room on mount
   useEffect(() => {
     if (!roomId || !userId || !username || hasJoined) return;
 
@@ -70,7 +68,6 @@ export default function Room() {
     join();
   }, [roomId, userId, username, hasJoined]);
 
-  // Fetch state periodically
   const fetchState = useCallback(async () => {
     if (!roomId) return;
     try {
@@ -82,7 +79,6 @@ export default function Room() {
       if (!res.ok) throw new Error('Error fetching room state.');
       const data: RoomState = await res.json();
 
-      // Reset local inputs & timer when server advances to new round
       if (data.round > lastRoundRef.current) {
         lastRoundRef.current = data.round;
         setKeywords(['', '', '', '']);
@@ -96,7 +92,6 @@ export default function Room() {
     }
   }, [roomId]);
 
-  // Polling Hook
   useEffect(() => {
     if (!hasJoined) return;
     fetchState();
@@ -106,7 +101,6 @@ export default function Room() {
     };
   }, [hasJoined, fetchState]);
 
-  // Advance to next round / emoji
   const handleStartRound = useCallback(async () => {
     if (!roomId) return;
     setError('');
@@ -115,16 +109,16 @@ export default function Room() {
       const res = await fetch(`${API_BASE_URL}/${roomId}/start_round`, {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('Failed to start next round.');
+      if (!res.ok) throw new Error('Failed to fetch new emoji.');
       await fetchState();
     } catch (err: any) {
-      setError(err.message || 'Error starting the round.');
+      setError(err.message || 'Error fetching new emoji.');
     } finally {
       setIsSubmitting(false);
     }
   }, [roomId, fetchState]);
 
-  // Single Timer & Host auto-advance on expiration
+  // Single Timer & Auto-advance hook
   useEffect(() => {
     if (roomState?.state !== 'playing') return;
 
@@ -146,12 +140,12 @@ export default function Room() {
     });
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!roomId || !userId) return;
 
-    const filledKeywords = keywords.filter((k) => k.trim() !== '');
-    if (filledKeywords.length === 0) {
+    const filled = keywords.filter((k) => k.trim() !== '');
+    if (filled.length === 0) {
       setError('Please fill out at least one keyword before submitting.');
       return;
     }
@@ -163,7 +157,7 @@ export default function Room() {
       const res = await fetch(`${API_BASE_URL}/${roomId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keywords: filledKeywords, user_id: userId }),
+        body: JSON.stringify({ keywords: filled, user_id: userId }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -185,8 +179,8 @@ export default function Room() {
       <header className="qmoji-header">
         <h1>Welcome to Qmoji! Multiplayer Mode</h1>
         <p>
-          Describe the emoji with up to four keywords in 30 seconds! <br />
-          <strong>Room ID:</strong> {roomId} | <strong>Round:</strong> {roomState?.round ?? 0}
+          Describe the emoji with up to four keywords in 30 seconds!
+          Room ID: {roomId} | Round: {roomState?.round ?? 0}
         </p>
       </header>
 
@@ -197,166 +191,88 @@ export default function Room() {
       )}
 
       {submitSuccess && (
-        <p
-          className="qmoji-success"
-          role="alert"
-          style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}
-        >
+        <p className="qmoji-success" role="alert" style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}>
           Successfully saved your keywords!
         </p>
       )}
 
       {!roomState ? (
-        <p style={{ textAlign: 'center' }}>Loading room state...</p>
+        <p>Loading room...</p>
       ) : (
         <>
-          {/* Players Sidebar / List */}
-          <section className="keyword-panel" style={{ marginBottom: '1.5rem' }}>
-            <h2>Players ({roomState.total_players})</h2>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0 0' }}>
+          <section style={{ marginBottom: '1.5rem' }}>
+            <h3>Players ({roomState.total_players})</h3>
+            <ul>
               {roomState.players.map((p, index) => (
-                <li key={p.user_id} style={{ padding: '4px 0' }}>
-                  {p.name} {index === 0 ? '👑 (Host)' : ''} {p.user_id === userId ? '(you)' : ''} — Score: {roomState.scores[p.user_id] ?? 0}
+                <li key={p.user_id}>
+                  {p.name} {index === 0 ? '👑 (Host)' : ''} {p.user_id === userId ? '(you)' : ''} — score: {roomState.scores[p.user_id] ?? 0}
                 </li>
               ))}
             </ul>
           </section>
 
-          {/* Lobby Waiting State */}
           {roomState.state === 'waiting' && (
-            <section className="qmoji-stage" aria-live="polite" style={{ flexDirection: 'column', gap: '16px' }}>
-              <p style={{ textAlign: 'center' }}>
-                Waiting for players. Share room code <strong>{roomId}</strong> with friends.
-              </p>
+            <section>
+              <p>Waiting for players. Share room code <strong>{roomId}</strong> with friends.</p>
               {isHost ? (
-                <button
-                  type="button"
-                  className="submit-button"
-                  onClick={handleStartRound}
-                  disabled={isSubmitting}
-                  style={{
-                    padding: '12px 24px',
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '999px',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                  }}
-                >
-                  {isSubmitting ? 'Starting...' : 'Start Game'}
+                <button onClick={handleStartRound} style={{ padding: '0.75rem 1.5rem' }}>
+                  Start Game
                 </button>
               ) : (
-                <p style={{ fontStyle: 'italic' }}>Waiting for the host to start the game...</p>
+                <p>Waiting for the host to start...</p>
               )}
             </section>
           )}
 
-          {/* Active Gameplay Workspace */}
           {roomState.state === 'playing' && (
-            <div className="workspace-container">
-              {/* Left Column: Stage Display */}
-              <section
-                className="qmoji-stage"
-                aria-live="polite"
-                style={{ flexDirection: 'column', gap: '24px' }}
-              >
-                <div
-                  style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: timeLeft <= 5 ? '#b42318' : 'var(--text-h)',
-                    textAlign: 'center',
-                  }}
-                >
-                  {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up! Loading next..."}
-                </div>
+            <section>
+              <div style={{ fontWeight: 'bold', marginBottom: '1rem', color: timeLeft <= 5 ? '#b42318' : 'inherit' }}>
+                {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up! Loading next emoji..."}
+              </div>
+              <div style={{ fontSize: '3rem', textAlign: 'center', marginBottom: '1rem' }}>
+                {roomState.emoji}
+              </div>
 
-                <div className="emoji-display" aria-label="Random emoji">
-                  <span className="emoji" role="img">
-                    {roomState.emoji}
-                  </span>
-                </div>
+              <p style={{ textAlign: 'center' }}>
+                {roomState.submitted_count} / {roomState.total_players} players have submitted
+              </p>
 
-                <p style={{ textAlign: 'center', margin: 0, fontWeight: 500 }}>
-                  Submissions: {roomState.submitted_count} / {roomState.total_players} players
-                </p>
-              </section>
-
-              {/* Right Column: Keyword Input Form */}
-              <section className="keyword-panel" aria-labelledby="keyword-prompt">
-                <h2
-                  id="keyword-prompt"
-                  style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}
-                >
-                  What words come to mind for{' '}
-                  <span className="emoji-inline" aria-hidden="true" style={{ fontSize: '1.2em' }}>
-                    {roomState.emoji}
-                  </span>
-                  ?
-                </h2>
-
-                <form className="keyword-form" onSubmit={handleSubmit}>
-                  <div className="keyword-grid">
-                    {keywords.map((keyword, index) => (
-                      <label key={index} className="keyword-field">
-                        Keyword {index + 1}
-                        <input
-                          type="text"
-                          value={keyword}
-                          placeholder={`Keyword ${index + 1}`}
-                          onChange={(event) => handleKeywordChange(index, event.target.value)}
-                          autoComplete="off"
-                          disabled={isSubmitting || alreadySubmitted || timeLeft === 0}
-                        />
-                      </label>
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '24px' }}>
-                    {!alreadySubmitted && (
-                      <button
-                        type="submit"
-                        className="submit-button"
-                        disabled={isSubmitting || timeLeft === 0}
-                        style={{
-                          flex: 1,
-                          padding: '12px 24px',
-                          backgroundColor: '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '999px',
-                          cursor: 'pointer',
-                          font: 'inherit',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {isSubmitting ? 'Saving...' : 'Submit Keywords'}
-                      </button>
-                    )}
-
-                    {/* Show "Try another emoji" button to Host or when all players submit */}
-                    {(roomState.submitted_count === roomState.total_players || isHost) && (
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        onClick={handleStartRound}
-                        disabled={isSubmitting}
-                        style={{ flex: 1, margin: 0, width: alreadySubmitted ? '100%' : 'auto' }}
-                      >
-                        {isSubmitting ? 'Loading...' : 'Try another emoji'}
-                      </button>
-                    )}
-                  </div>
-
-                  {alreadySubmitted && (
-                    <p style={{ textAlign: 'center', fontStyle: 'italic', marginTop: '16px' }}>
-                      Submitted! Waiting for other players or timer expiration...
-                    </p>
-                  )}
+              {!alreadySubmitted ? (
+                <form onSubmit={handleSubmit}>
+                  {keywords.map((kw, i) => (
+                    <input
+                      key={i}
+                      type="text"
+                      value={kw}
+                      placeholder={`Keyword ${i + 1}`}
+                      onChange={(e) => handleKeywordChange(i, e.target.value)}
+                      disabled={isSubmitting || timeLeft === 0}
+                      style={{ display: 'block', width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
+                    />
+                  ))}
+                  <button type="submit" disabled={isSubmitting || timeLeft === 0} style={{ padding: '0.75rem 1.5rem', width: '100%' }}>
+                    {isSubmitting ? 'Saving...' : 'Submit Keywords'}
+                  </button>
                 </form>
-              </section>
-            </div>
+              ) : (
+                <p style={{ textAlign: 'center', fontStyle: 'italic', marginTop: '1rem' }}>
+                  Waiting for other players or timer expiration...
+                </p>
+              )}
+
+              {(roomState.submitted_count === roomState.total_players || isHost) && (
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleStartRound}
+                    disabled={isSubmitting}
+                    style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px' }}
+                  >
+                    {isSubmitting ? 'Loading...' : 'Try another emoji'}
+                  </button>
+                </div>
+              )}
+            </section>
           )}
         </>
       )}
