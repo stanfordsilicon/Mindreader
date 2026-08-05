@@ -36,14 +36,15 @@ export default function Room() {
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
 
-  // Redirect to lobby if missing authentication or room parameters
+  // Derive host status dynamically (first player in list)
+  const isHost = Boolean(roomState?.players[0]?.user_id && roomState.players[0].user_id === userId);
+
   useEffect(() => {
     if (!roomId || !userId || !username) {
       navigate('/multiplayer');
     }
   }, [roomId, userId, username, navigate]);
 
-  // Join room on mount
   useEffect(() => {
     if (!roomId || !userId || !username || hasJoined) return;
 
@@ -67,7 +68,6 @@ export default function Room() {
     join();
   }, [roomId, userId, username, hasJoined]);
 
-  // Fetch current state
   const fetchState = useCallback(async () => {
     if (!roomId) return;
     try {
@@ -79,7 +79,6 @@ export default function Room() {
       if (!res.ok) throw new Error('Error fetching room state.');
       const data: RoomState = await res.json();
 
-      // Reset local round state when server advances to new round
       if (data.round > lastRoundRef.current) {
         lastRoundRef.current = data.round;
         setKeywords(['', '', '', '']);
@@ -93,7 +92,6 @@ export default function Room() {
     }
   }, [roomId]);
 
-  // Poll state periodically
   useEffect(() => {
     if (!hasJoined) return;
     fetchState();
@@ -103,26 +101,36 @@ export default function Room() {
     };
   }, [hasJoined, fetchState]);
 
-  // Timer countdown
-  useEffect(() => {
-    if (roomState?.state !== 'playing' || timeLeft <= 0) return;
-    const t = window.setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
-    return () => window.clearTimeout(t);
-  }, [roomState?.state, timeLeft]);
-
-  const handleStartRound = async () => {
+  const handleStartRound = useCallback(async () => {
     if (!roomId) return;
     setError('');
+    setIsSubmitting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/${roomId}/start_round`, {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('Failed to start round.');
+      if (!res.ok) throw new Error('Failed to fetch new emoji.');
       await fetchState();
     } catch (err: any) {
-      setError(err.message || 'Error starting the round.');
+      setError(err.message || 'Error fetching new emoji.');
+    } finally {
+      setIsSubmitting(false);
     }
-  };
+  }, [roomId, fetchState]);
+
+  // Single Timer & Auto-advance hook
+  useEffect(() => {
+    if (roomState?.state !== 'playing') return;
+
+    if (timeLeft > 0) {
+      const timer = window.setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (timeLeft === 0 && isHost) {
+      handleStartRound();
+    }
+  }, [roomState?.state, timeLeft, isHost, handleStartRound]);
 
   const handleKeywordChange = (index: number, value: string) => {
     setKeywords((prev) => {
@@ -183,11 +191,7 @@ export default function Room() {
       )}
 
       {submitSuccess && (
-        <p
-          className="qmoji-success"
-          role="alert"
-          style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}
-        >
+        <p className="qmoji-success" role="alert" style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}>
           Successfully saved your keywords!
         </p>
       )}
@@ -199,10 +203,9 @@ export default function Room() {
           <section style={{ marginBottom: '1.5rem' }}>
             <h3>Players ({roomState.total_players})</h3>
             <ul>
-              {roomState.players.map((p) => (
+              {roomState.players.map((p, index) => (
                 <li key={p.user_id}>
-                  {p.name}
-                  {p.user_id === userId ? ' (you)' : ''} — score: {roomState.scores[p.user_id] ?? 0}
+                  {p.name} {index === 0 ? '👑 (Host)' : ''} {p.user_id === userId ? '(you)' : ''} — score: {roomState.scores[p.user_id] ?? 0}
                 </li>
               ))}
             </ul>
@@ -211,22 +214,26 @@ export default function Room() {
           {roomState.state === 'waiting' && (
             <section>
               <p>Waiting for players. Share room code <strong>{roomId}</strong> with friends.</p>
-              <button onClick={handleStartRound} style={{ padding: '0.75rem 1.5rem' }}>
-                Start Round
-              </button>
+              {isHost ? (
+                <button onClick={handleStartRound} style={{ padding: '0.75rem 1.5rem' }}>
+                  Start Game
+                </button>
+              ) : (
+                <p>Waiting for the host to start...</p>
+              )}
             </section>
           )}
 
           {roomState.state === 'playing' && (
             <section>
-              <div style={{ fontWeight: 'bold', marginBottom: '1rem' }}>
-                {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up!"}
+              <div style={{ fontWeight: 'bold', marginBottom: '1rem', color: timeLeft <= 5 ? '#b42318' : 'inherit' }}>
+                {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up! Loading next emoji..."}
               </div>
               <div style={{ fontSize: '3rem', textAlign: 'center', marginBottom: '1rem' }}>
                 {roomState.emoji}
               </div>
 
-              <p>
+              <p style={{ textAlign: 'center' }}>
                 {roomState.submitted_count} / {roomState.total_players} players have submitted
               </p>
 
@@ -243,18 +250,27 @@ export default function Room() {
                       style={{ display: 'block', width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
                     />
                   ))}
-                  <button type="submit" disabled={isSubmitting || timeLeft === 0} style={{ padding: '0.75rem 1.5rem' }}>
+                  <button type="submit" disabled={isSubmitting || timeLeft === 0} style={{ padding: '0.75rem 1.5rem', width: '100%' }}>
                     {isSubmitting ? 'Saving...' : 'Submit Keywords'}
                   </button>
                 </form>
               ) : (
-                <p>Waiting for other players to submit...</p>
+                <p style={{ textAlign: 'center', fontStyle: 'italic', marginTop: '1rem' }}>
+                  Waiting for other players or timer expiration...
+                </p>
               )}
 
-              {roomState.submitted_count === roomState.total_players && (
-                <button onClick={handleStartRound} style={{ marginTop: '1rem', padding: '0.75rem 1.5rem' }}>
-                  Next Round
-                </button>
+              {(roomState.submitted_count === roomState.total_players || isHost) && (
+                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleStartRound}
+                    disabled={isSubmitting}
+                    style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px' }}
+                  >
+                    {isSubmitting ? 'Loading...' : 'Try another emoji'}
+                  </button>
+                </div>
               )}
             </section>
           )}
