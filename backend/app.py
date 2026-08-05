@@ -43,7 +43,9 @@ players_col.create_index([("room_id", ASCENDING)])
 
 SinglePlayerOnlyForNow = True  # Switch for later, for now, we will only allow single player games, but later we will allow multiplayer games
 # Thus, until we have implemented multiplayer, the room_id can be hardcoded to "1" for now, which will cause a lot less confusion for now
-language = ""
+language = "no_language" \
+"" \
+"-submitted"
 seconds_per_round = 30
 
 # -------#
@@ -281,7 +283,6 @@ def submit_keywords(room_id):
             keywords=input_stack,
         )"""
 
-        update_answer_counts(game["language"], game["current_emoji"], input_stack)
         game["submissions"][user_id] = input_stack
 
         update_answer_counts(game["language"], game["current_emoji"], input_stack)
