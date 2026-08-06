@@ -7,6 +7,8 @@ type RoundResults = {
   round: number;
   emoji: string;
   results: Record<string, Record<string, number>>; // user_id -> { word: count }
+  round_scores: Record<string, number>; // user_id -> points earned this round
+  total_scores: Record<string, number>; // user_id -> running total
 };
 
 function SingleplayerGame() {
@@ -184,25 +186,95 @@ function SingleplayerGame() {
       )}
 
       {submitSuccess && (
-        <section className="round-results" aria-label="Round results" style={{ maxWidth: '480px', margin: '16px auto' }}>
-          <h3 style={{ textAlign: 'center' }}>How everyone answered {roundResults?.emoji ?? currentEmoji}</h3>
+        <section
+          className="round-results"
+          aria-label="Round results"
+          style={{ maxWidth: '480px', margin: '16px auto' }}
+        >
+          <h3 style={{ textAlign: 'center' }}>
+            How everyone answered {roundResults?.emoji ?? currentEmoji}
+          </h3>
+
           {isLoadingResults ? (
             <p style={{ textAlign: 'center' }}>Loading results...</p>
           ) : roundResults ? (
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {Object.entries(roundResults.results).map(([userId, words]) => (
-                <li key={userId} style={{ marginBottom: '12px' }}>
-                  <strong>{userId === getUserId() ? 'You' : `Player ${userId.slice(0, 6)}`}</strong>
-                  <ul style={{ listStyle: 'none', paddingLeft: '12px' }}>
-                    {Object.entries(words).map(([word, count]) => (
-                      <li key={word}>
-                        {word}: {count}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p style={{ textAlign: 'center', fontWeight: 'bold' }}>
+                You scored {roundResults.round_scores[getUserId()] ?? 0} points this round
+                {roundResults.total_scores[getUserId()] !== undefined && (
+                  <> (total: {roundResults.total_scores[getUserId()]})</>
+                )}
+              </p>
+
+              {Object.entries(roundResults.results).map(([userId, words]) => {
+                const sortedWords = Object.entries(words).sort(([, a], [, b]) => b - a);
+                const maxCount = Math.max(...sortedWords.map(([, c]) => c), 1);
+
+                return (
+                  <div key={userId} style={{ marginBottom: '20px' }}>
+                    <strong>
+                      {userId === getUserId() ? 'You' : `Player ${userId.slice(0, 6)}`}
+                    </strong>
+                    <ul style={{ listStyle: 'none', padding: 0, marginTop: '8px' }}>
+                      {sortedWords.map(([word, count], index) => (
+                        <li
+                          key={word}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr auto',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '6px',
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: 'relative',
+                              background: '#eee',
+                              borderRadius: '6px',
+                              overflow: 'hidden',
+                              height: '28px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: `${(count / maxCount) * 100}%`,
+                                background: '#4CAF50',
+                                transition: 'width 0.4s ease',
+                                transitionDelay: `${index * 80}ms`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                position: 'relative',
+                                padding: '0 10px',
+                                lineHeight: '28px',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {word}
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              fontWeight: 'bold',
+                              minWidth: '24px',
+                              textAlign: 'right',
+                            }}
+                          >
+                            {count}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </>
           ) : (
             <p style={{ textAlign: 'center' }}>No results yet.</p>
           )}
@@ -305,7 +377,7 @@ function SingleplayerGame() {
             </form>
           </section>
         </div>
-      )}    
+      )}
     </main>
   );
 }
