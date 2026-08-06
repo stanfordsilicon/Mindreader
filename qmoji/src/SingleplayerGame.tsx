@@ -186,99 +186,173 @@ function SingleplayerGame() {
       )}
 
       {submitSuccess && (
-        <section
-          className="round-results"
+        <div
+          role="dialog"
+          aria-modal="true"
           aria-label="Round results"
-          style={{ maxWidth: '480px', margin: '16px auto' }}
+          onClick={() => setSubmitSuccess(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            zIndex: 1000,
+          }}
         >
-          <h3 style={{ textAlign: 'center' }}>
-            How everyone answered {roundResults?.emoji ?? currentEmoji}
-          </h3>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '420px',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
+              position: 'relative',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setSubmitSuccess(false)}
+              aria-label="Close"
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                border: 'none',
+                background: 'transparent',
+                fontSize: '1.25rem',
+                cursor: 'pointer',
+                lineHeight: 1,
+                padding: '4px',
+              }}
+            >
+              ✕
+            </button>
 
-          {isLoadingResults ? (
-            <p style={{ textAlign: 'center' }}>Loading results...</p>
-          ) : roundResults ? (
-            <>
-              <p style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                You scored {roundResults.round_scores[getUserId()] ?? 0} points this round
-                {roundResults.total_scores[getUserId()] !== undefined && (
-                  <> (total: {roundResults.total_scores[getUserId()]})</>
-                )}
-              </p>
+            <h3 style={{ textAlign: 'center', marginTop: 0, marginBottom: '4px' }}>
+              How everyone answered {roundResults?.emoji ?? currentEmoji}
+            </h3>
 
-              {Object.entries(roundResults.results).map(([userId, words]) => {
-                const sortedWords = Object.entries(words).sort(([, a], [, b]) => b - a);
-                const maxCount = Math.max(...sortedWords.map(([, c]) => c), 1);
+            {isLoadingResults ? (
+              <p style={{ textAlign: 'center' }}>Loading results...</p>
+            ) : roundResults ? (
+              <>
+                <p
+                  style={{
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '1.1rem',
+                    color: '#2e7d32',
+                    margin: '8px 0 16px',
+                  }}
+                >
+                  +{roundResults.round_scores[getUserId()] ?? 0} points
+                  {roundResults.total_scores[getUserId()] !== undefined && (
+                    <span style={{ fontWeight: 500, color: '#555', display: 'block', fontSize: '0.85rem' }}>
+                      total: {roundResults.total_scores[getUserId()]}
+                    </span>
+                  )}
+                </p>
 
-                return (
-                  <div key={userId} style={{ marginBottom: '20px' }}>
-                    <strong>
-                      {userId === getUserId() ? 'You' : `Player ${userId.slice(0, 6)}`}
-                    </strong>
-                    <ul style={{ listStyle: 'none', padding: 0, marginTop: '8px' }}>
-                      {sortedWords.map(([word, count], index) => (
-                        <li
-                          key={word}
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr auto',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '6px',
-                          }}
-                        >
-                          <div
+                {Object.entries(roundResults.results).map(([userId, words]) => {
+                  const sortedWords = Object.entries(words).sort(([, a], [, b]) => b - a);
+                  const maxCount = Math.max(...sortedWords.map(([, c]) => c), 1);
+
+                  return (
+                    <div key={userId} style={{ marginBottom: '20px' }}>
+                      <strong>
+                        {userId === getUserId() ? 'You' : `Player ${userId.slice(0, 6)}`}
+                      </strong>
+                      <ul style={{ listStyle: 'none', padding: 0, marginTop: '8px' }}>
+                        {sortedWords.map(([word, count], index) => (
+                          <li
+                            key={word}
                             style={{
-                              position: 'relative',
-                              background: '#eee',
-                              borderRadius: '6px',
-                              overflow: 'hidden',
-                              height: '28px',
+                              display: 'grid',
+                              gridTemplateColumns: '1fr auto',
+                              alignItems: 'center',
+                              gap: '8px',
+                              marginBottom: '6px',
                             }}
                           >
                             <div
                               style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                width: `${(count / maxCount) * 100}%`,
-                                background: '#4CAF50',
-                                transition: 'width 0.4s ease',
-                                transitionDelay: `${index * 80}ms`,
-                              }}
-                            />
-                            <span
-                              style={{
                                 position: 'relative',
-                                padding: '0 10px',
-                                lineHeight: '28px',
-                                fontWeight: 500,
+                                background: '#eee',
+                                borderRadius: '6px',
+                                overflow: 'hidden',
+                                height: '28px',
                               }}
                             >
-                              {word}
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: `${(count / maxCount) * 100}%`,
+                                  background: '#4CAF50',
+                                  transition: 'width 0.4s ease',
+                                  transitionDelay: `${index * 80}ms`,
+                                }}
+                              />
+                              <span
+                                style={{
+                                  position: 'relative',
+                                  padding: '0 10px',
+                                  lineHeight: '28px',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {word}
+                              </span>
+                            </div>
+                            <span
+                              style={{
+                                fontWeight: 'bold',
+                                minWidth: '24px',
+                                textAlign: 'right',
+                              }}
+                            >
+                              {count}
                             </span>
-                          </div>
-                          <span
-                            style={{
-                              fontWeight: 'bold',
-                              minWidth: '24px',
-                              textAlign: 'right',
-                            }}
-                          >
-                            {count}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </>
-          ) : (
-            <p style={{ textAlign: 'center' }}>No results yet.</p>
-          )}
-        </section>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <p style={{ textAlign: 'center' }}>No results yet.</p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleTryAnother}
+              style={{
+                width: '100%',
+                padding: '12px 24px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                font: 'inherit',
+                fontWeight: 500,
+                marginTop: '8px',
+              }}
+            >
+              Try another emoji
+            </button>
+          </div>
+        </div>
       )}
 
       {!showEmoji ? (
