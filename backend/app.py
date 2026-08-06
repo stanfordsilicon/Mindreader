@@ -28,6 +28,7 @@ players_col = db["players"]
 submissions_col = db["submissions"]
 answer_counts_col = db["answer_counts"]
 emoji_based_answer_counts_col = db["emoji_based_answer_counts"]  
+room_based_emoji_based_answer_counts_col = db["room_based_emoji_based_answer_counts"]  
 
 # Indexes (equivalent to the old SQL constraints)
 answer_counts_col.create_index(
@@ -36,6 +37,9 @@ answer_counts_col.create_index(
     name="uq_answer",
 )
 emoji_based_answer_counts_col.create_index(
+     [("_id", ASCENDING)], 
+)
+room_based_emoji_based_answer_counts_col.create_index(
      [("_id", ASCENDING)], 
 )
 submissions_col.create_index([("room_id", ASCENDING)])
@@ -113,6 +117,22 @@ def update_emoji_answer_counts(language, emoji, input_stack):
                 {"$push": {language_field: {"word": word, "count": n}}},
                 upsert=True,
             )
+
+def update_room_based_emoji_answer_counts(room_id, language, emoji, input_stack):
+    counts = Counter(input_stack)
+    language_field = f"language.{language}"
+    for word, n in counts.items():
+        result = room_based_emoji_based_answer_counts_col.update_one(
+            {"_id": room_id, f"{language_field}.emoji.{emoji}.word": word},
+            {"$inc": {f"{language_field}.emoji.{emoji}.$.count": n}},
+        )
+        if result.matched_count == 0:
+            room_based_emoji_based_answer_counts_col.update_one(
+                {"_id": room_id},
+                {"$push": {f"{language_field}.emoji.{emoji}": {"word": word, "count": n}}},
+                upsert=True,
+            )
+
 
 @app.route("/create_room", methods=["POST"])
 def create_room():
@@ -275,6 +295,7 @@ def submit_keywords(room_id):
         update_answer_counts(game["language"], game["current_emoji"], input_stack)
 
         update_emoji_answer_counts(game["language"], game["current_emoji"], input_stack)
+        update_room_based_emoji_answer_counts(room_id, game["language"], game["current_emoji"], input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
