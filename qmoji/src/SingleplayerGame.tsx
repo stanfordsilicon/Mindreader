@@ -77,7 +77,10 @@ function SingleplayerGame() {
   const fetchRoundResults = async () => {
     setIsLoadingResults(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/1/round_results`);
+      const response = await fetch(`${API_BASE_URL}/1/round_results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
       if (!response.ok) {
         throw new Error('Could not load round results.');
       }
