@@ -3,6 +3,12 @@ import Start from './Start';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
 
+type RoundResults = {
+  round: number;
+  emoji: string;
+  results: Record<string, Record<string, number>>; // user_id -> { word: count }
+};
+
 function SingleplayerGame() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [currentEmoji, setCurrentEmoji] = useState('');
@@ -13,6 +19,8 @@ function SingleplayerGame() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [error, setError] = useState('');
   const [timeLeft, setTimeLeft] = useState(30);
+  const [roundResults, setRoundResults] = useState<RoundResults | null>(null);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
 
   useEffect(() => {
     let timer: number;
@@ -30,6 +38,7 @@ function SingleplayerGame() {
     setIsLoading(true);
     setError('');
     setSubmitSuccess(false);
+    setRoundResults(null);
 
     try {
       const roomResponse = await fetch(`${API_BASE_URL}/create_room`, {
@@ -65,6 +74,24 @@ function SingleplayerGame() {
     });
   };
 
+  const fetchRoundResults = async () => {
+    setIsLoadingResults(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/1/round_results`);
+      if (!response.ok) {
+        throw new Error('Could not load round results.');
+      }
+      const data: RoundResults = await response.json();
+      setRoundResults(data);
+    } catch (fetchError) {
+      const message =
+        fetchError instanceof Error ? fetchError.message : 'Failed to load round results.';
+      setError(message);
+    } finally {
+      setIsLoadingResults(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -84,12 +111,14 @@ function SingleplayerGame() {
         body: JSON.stringify({ keywords: filledKeywords, user_id: getUserId() }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to save keywords.');
       }
 
       setSubmitSuccess(true);
+      fetchRoundResults();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save to database.';
       setError(`Database Error: ${message}`);
@@ -105,6 +134,7 @@ function SingleplayerGame() {
     setTimeLeft(30);
     setError('');
     setSubmitSuccess(false);
+    setRoundResults(null);
   };
 
   const getUserId = () => {
@@ -148,6 +178,32 @@ function SingleplayerGame() {
         >
           Successfully saved your keywords!
         </p>
+      )}
+
+      {submitSuccess && (
+        <section className="round-results" aria-label="Round results" style={{ maxWidth: '480px', margin: '16px auto' }}>
+          <h3 style={{ textAlign: 'center' }}>How everyone answered {roundResults?.emoji ?? currentEmoji}</h3>
+          {isLoadingResults ? (
+            <p style={{ textAlign: 'center' }}>Loading results...</p>
+          ) : roundResults ? (
+            <ul style={{ listStyle: 'none', padding: 0 }}>
+              {Object.entries(roundResults.results).map(([userId, words]) => (
+                <li key={userId} style={{ marginBottom: '12px' }}>
+                  <strong>{userId === getUserId() ? 'You' : `Player ${userId.slice(0, 6)}`}</strong>
+                  <ul style={{ listStyle: 'none', paddingLeft: '12px' }}>
+                    {Object.entries(words).map(([word, count]) => (
+                      <li key={word}>
+                        {word}: {count}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ textAlign: 'center' }}>No results yet.</p>
+          )}
+        </section>
       )}
 
       {!showEmoji ? (

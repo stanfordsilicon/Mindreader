@@ -134,6 +134,29 @@ def update_room_based_emoji_answer_counts(room_id, language, emoji, input_stack)
             )
 
 
+
+
+def scoringSystem(room_id, language, emoji, word):
+    projection = {
+        f"language.{language}.emoji.{emoji}": {
+            "$elemMatch": {"word": word}
+        },
+        "_id": 0,
+    }
+    doc = room_based_emoji_based_answer_counts_col.find_one({"_id": room_id}, projection)
+    if not doc:
+        return 0
+
+    arr = (
+        doc.get("language", {})
+           .get(language, {})
+           .get("emoji", {})
+           .get(emoji, [])
+    )
+    return arr[0]["count"] if arr else 0
+
+  
+
 @app.route("/create_room", methods=["POST"])
 def create_room():
     data = flask.request.get_json(silent=True) or {}
@@ -170,8 +193,7 @@ def create_room():
     return flask.jsonify({"room_id": room_id, "emoji": games[room_id]["current_emoji"]})
 
 
-
-def post_start_dataRetrieve():
+"""# If I remember correctly, this function is not used anywhere, but it is a good idea to keep it here in case it is somehow relevant out of nowhere
     data = flask.request.get_json(silent=True)
     if not data or 'language' not in data or 'seconds_per_round' not in data:
         return flask.jsonify({'error': 'Invalid data'}), 400
@@ -179,7 +201,7 @@ def post_start_dataRetrieve():
     language = data['language']
     seconds_per_round = data['seconds_per_round']
     # The above function is to retrieve the data from the poststart page, and store it in the global variables language and seconds_per_round
-
+"""
 
 @app.route("/api/index")  # -- I dont know what the director should be, but this is the route for Hui Ying's tsx filex
 def sendEmoji():
@@ -302,17 +324,24 @@ def submit_keywords(room_id):
     return flask.jsonify({"message": "Keywords submitted"})
 
 
-# -- Here be the code to calculate scores for each player, implement upon multiplayer
-"""
-def scoringSystem(room_id):
-    pass
-    #some code to calculate the scores for each player based on the data from the games dict, create other
-    #dict which shall be stored by retrieve_input_stack() for internal score keeping
+@app.route("/<room_id>/round_results", methods=["POST"])
+def send_out_scores(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
 
-#def send_out_scores():
-    pass
-    #send out the jsonified files to the frontend, to display to user and create dopamine
-"""
+    results = {}
+    for user_id, words in game["submissions"].items():
+        results[user_id] = {
+            word: scoringSystem(room_id, game["language"], game["current_emoji"], word)
+            for word in set(words)
+        }
+
+    return flask.jsonify({
+        "round": game["round"],
+        "emoji": game["current_emoji"],
+        "results": results,
+    })
 
 
 
