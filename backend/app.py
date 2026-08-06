@@ -27,6 +27,7 @@ rooms_col = db["rooms"]
 players_col = db["players"]
 submissions_col = db["submissions"]
 answer_counts_col = db["answer_counts"]
+emoji_based_answer_counts_col = db["emoji_based_answer_counts"]  
 
 # Indexes (equivalent to the old SQL constraints)
 answer_counts_col.create_index(
@@ -34,9 +35,8 @@ answer_counts_col.create_index(
     unique=True,
     name="uq_answer",
 )
-answer_counts_col.create_index(
-    [("language", ASCENDING), ("emoji", ASCENDING)],
-    name="idx_lang_emoji",
+emoji_based_answer_counts_col.create_index(
+     [("_id", ASCENDING)], 
 )
 submissions_col.create_index([("room_id", ASCENDING)])
 players_col.create_index([("room_id", ASCENDING)])
@@ -91,7 +91,6 @@ def save_submission(room_id, user_id, language, emoji, round_num, keywords):
 
 
 def update_answer_counts(language, emoji, input_stack):
-    # Rolls the submitted keywords into the running per-word tally.
     counts = Counter(input_stack)
     for word, n in counts.items():
         answer_counts_col.update_one(
@@ -100,9 +99,20 @@ def update_answer_counts(language, emoji, input_stack):
             upsert=True,
         )
 
-# -- might be handy to implement per-player logs for inappropriate content removal and to check on messing with data
-# there will be a privacy trade-off, so might not be worth it, plus it might get cancelled out by sheer numbers
-
+def update_emoji_answer_counts(language, emoji, input_stack):
+    counts = Counter(input_stack)
+    language_field = f"language.{language}"
+    for word, n in counts.items():
+        result = emoji_based_answer_counts_col.update_one(
+            {"_id": emoji, f"{language_field}.word": word},
+            {"$inc": {f"{language_field}.$.count": n}},
+        )
+        if result.matched_count == 0:
+            emoji_based_answer_counts_col.update_one(
+                {"_id": emoji},
+                {"$push": {language_field: {"word": word, "count": n}}},
+                upsert=True,
+            )
 
 @app.route("/create_room", methods=["POST"])
 def create_room():
@@ -274,18 +284,11 @@ def submit_keywords(room_id):
             keywords=input_stack,
         )
 
-        """save_all_submission(.   #item for implementation of emoji-based database storage, but for now, we will just store the data in the submissions collection
-            room_id=room_id,
-            user_id=user_id,
-            language=game["language"],
-            emoji=game["current_emoji"],
-            round_num=game["round"],
-            keywords=input_stack,
-        )"""
-
         game["submissions"][user_id] = input_stack
 
         update_answer_counts(game["language"], game["current_emoji"], input_stack)
+
+        update_emoji_answer_counts(game["language"], game["current_emoji"], input_stack)
     except Exception as e:
         return flask.jsonify({"error": f"Failed to save keywords: {e}"}), 500
 
