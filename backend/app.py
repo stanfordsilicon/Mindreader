@@ -15,7 +15,7 @@ load_dotenv()
 app = flask.Flask(__name__)
 CORS(app, origins=[
     "https://qmoji-webapp.vercel.app",
-    "https://qmoji-webapp-.*-silicons-projects-9fd9ab07\.vercel\.app",
+    r"https://qmoji-webapp-.*-silicons-projects-9fd9ab07\.vercel\.app",
     "http://localhost:5173",
 ])
 
@@ -137,12 +137,9 @@ def update_room_based_emoji_answer_counts(room_id, language, emoji, input_stack)
 
 
 def scoringSystem(room_id, language, emoji, word):
-    projection = {
-        f"language.{language}.emoji.{emoji}": {
-            "$elemMatch": {"word": word}
-        },
-        "_id": 0,
-    }
+    field_path = f"language.{language}.emoji.{emoji}"
+    projection = {field_path: 1, "_id": 0}
+
     doc = room_based_emoji_based_answer_counts_col.find_one({"_id": room_id}, projection)
     if not doc:
         return 0
@@ -153,8 +150,10 @@ def scoringSystem(room_id, language, emoji, word):
            .get("emoji", {})
            .get(emoji, [])
     )
-    return arr[0]["count"] if arr else 0
-
+    for item in arr:
+        if item.get("word") == word:
+            return item.get("count", 0)
+    return 0
   
 
 @app.route("/create_room", methods=["POST"])
