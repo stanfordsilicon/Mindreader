@@ -120,7 +120,7 @@ def create_room():
     language = data.get("language", "en")
     SinglePlayerOnlyForNow = data.get("single_player_only", True)
     if SinglePlayerOnlyForNow:
-        room_id = "SinglePlayerRoom"
+        room_id = "1"
 
     else:
         room_id = str(uuid.uuid4())[:4].upper()
