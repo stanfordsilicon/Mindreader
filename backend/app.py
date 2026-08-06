@@ -161,20 +161,6 @@ def post_start_dataRetrieve():
     # The above function is to retrieve the data from the poststart page, and store it in the global variables language and seconds_per_round
 
 
-# according to GPT, you could implement a multiplayer timer function using a websocket, but I still need to learn how that works
-# Here is what I have for now, but it is not working yet, and I will need to learn how to implement a websocket for this to work
-"""class RoundTimer:
-    def __init__(self):
-        self.start_time = None
-    def start(self):
-        self.start_time = time.time()
-    def get_remaining_time(self):
-        if self.start_time is None:
-            return seconds_per_round
-        elapsed_time = time.time() - self.start_time
-        return max(0, seconds_per_round - elapsed_time)"""
-
-
 @app.route("/api/index")  # -- I dont know what the director should be, but this is the route for Hui Ying's tsx filex
 def sendEmoji():
     rand = random.choice(emoji_list)
@@ -306,20 +292,6 @@ def scoringSystem(room_id):
     pass
     #send out the jsonified files to the frontend, to display to user and create dopamine
 """
-# -- would probably be faster to delete this once uploadtodatatosql is implemented
-# -- Also, include scored for the word from scoringSystem()
-
-
-# --- MongoDB document shapes (replacing the old SQLAlchemy models) ---
-#
-# rooms:            { _id: room_id, state, round, language, current_emoji }
-# players:          { _id, room_id, name, score }
-# submissions:      { _id, room_id, user_id, language, emoji, round, keywords, submitted_at }
-#   (raw, one document per submit call — never aggregated/overwritten)
-# answer_counts:    { _id, language, emoji, word, count }
-#   (aggregated tally, unique on (language, emoji, word) via the "uq_answer" index above)
-
-
 
 
 
