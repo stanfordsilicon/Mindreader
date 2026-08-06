@@ -329,18 +329,38 @@ def send_out_scores(room_id):
     if not game:
         return flask.jsonify({"error": "Room not found"}), 404
 
-    results = {}
-    for user_id, words in game["submissions"].items():
-        results[user_id] = {
-            word: scoringSystem(room_id, game["language"], game["current_emoji"], word)
-            for word in set(words)
-        }
+    try:
+        results = {}
+        round_scores = {}
 
-    return flask.jsonify({
-        "round": game["round"],
-        "emoji": game["current_emoji"],
-        "results": results,
-    })
+        for user_id, words in game["submissions"].items():
+            word_counts = {
+                word: scoringSystem(room_id, game["language"], game["current_emoji"], word)
+                for word in set(words)
+            }
+            results[user_id] = word_counts
+
+            round_score = sum(word_counts.values())
+            round_scores[user_id] = round_score
+
+            game["scores"][user_id] = game["scores"].get(user_id, 0) + round_score
+
+            players_col.update_one(
+                {"_id": f"{room_id}_{user_id}"},
+                {"$set": {"score": game["scores"][user_id]}},
+                upsert=True,
+            )
+
+        return flask.jsonify({
+            "round": game["round"],
+            "emoji": game["current_emoji"],
+            "results": results,
+            "round_scores": round_scores,
+            "total_scores": game["scores"],
+        })
+    except Exception as e:
+        app.logger.exception("round_results failed")
+        return flask.jsonify({"error": str(e)}), 500
 
 
 
