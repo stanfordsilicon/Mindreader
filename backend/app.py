@@ -98,7 +98,7 @@ def update_answer_counts(language, emoji, input_stack):
     counts = Counter(input_stack)
     for word, n in counts.items():
         answer_counts_col.update_one(
-            {"language": language, "emoji": emoji, "word": word},
+            {"language": language, "emoji": emoji, "word": word.lower()},
             {"$inc": {"count": n}},
             upsert=True,
         )
@@ -108,13 +108,13 @@ def update_emoji_answer_counts(language, emoji, input_stack):
     language_field = f"language.{language}"
     for word, n in counts.items():
         result = emoji_based_answer_counts_col.update_one(
-            {"_id": emoji, f"{language_field}.word": word},
+            {"_id": emoji, f"{language_field}.word": word.lower()},
             {"$inc": {f"{language_field}.$.count": n}},
         )
         if result.matched_count == 0:
             emoji_based_answer_counts_col.update_one(
                 {"_id": emoji},
-                {"$push": {language_field: {"word": word, "count": n}}},
+                {"$push": {language_field: {"word": word.lower(), "count": n}}},
                 upsert=True,
             )
 
@@ -123,13 +123,13 @@ def update_room_based_emoji_answer_counts(room_id, language, emoji, input_stack)
     language_field = f"language.{language}"
     for word, n in counts.items():
         result = room_based_emoji_based_answer_counts_col.update_one(
-            {"_id": room_id, f"{language_field}.emoji.{emoji}.word": word},
+            {"_id": room_id, f"{language_field}.emoji.{emoji}.word": word.lower()},
             {"$inc": {f"{language_field}.emoji.{emoji}.$.count": n}},
         )
         if result.matched_count == 0:
             room_based_emoji_based_answer_counts_col.update_one(
                 {"_id": room_id},
-                {"$push": {f"{language_field}.emoji.{emoji}": {"word": word, "count": n}}},
+                {"$push": {f"{language_field}.emoji.{emoji}": {"word": word.lower(), "count": n}}},
                 upsert=True,
             )
 
@@ -151,8 +151,9 @@ def scoringSystem(room_id, language, emoji, word):
            .get(emoji, [])
     )
     for item in arr:
-        if item.get("word") == word:
-            return item.get("count", 0)
+        if item.get("word") == word.lower():
+            count =  item.get("count", 0)
+            return max(0, count - 1)
     return 0
   
 
@@ -335,7 +336,7 @@ def send_out_scores(room_id):
 
         for user_id, words in game["submissions"].items():
             word_counts = {
-                word: scoringSystem(room_id, game["language"], game["current_emoji"], word)
+                word: scoringSystem(room_id, game["language"], game["current_emoji"], word.lower())
                 for word in set(words)
             }
             results[user_id] = word_counts

@@ -322,7 +322,23 @@ export default function Room() {
                 )}
 
                 {Object.entries(roundResults.results).map(([id, words]) => {
-                  const sortedWords = Object.entries(words).sort(([, a], [, b]) => b - a);
+                  // Only show words that scored above 0 -- a 0 means nobody
+                  // else guessed it, so there's nothing meaningful to display.
+                  const sortedWords = Object.entries(words)
+                    .filter(([, count]) => count > 0)
+                    .sort(([, a], [, b]) => b - a);
+
+                  if (sortedWords.length === 0) {
+                    return (
+                      <div key={id} style={{ marginBottom: '20px' }}>
+                        <strong>{getPlayerName(id)}</strong>
+                        <p style={{ color: '#888', margin: '8px 0 0', fontStyle: 'italic' }}>
+                          0 points
+                        </p>
+                      </div>
+                    );
+                  }
+
                   const maxCount = Math.max(...sortedWords.map(([, c]) => c), 1);
 
                   return (
