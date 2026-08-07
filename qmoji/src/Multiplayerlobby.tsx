@@ -9,7 +9,7 @@ export const Multiplayerlobby: React.FC = () => {
   // State management
   const [username, setUsername] = useState<string>('');
   const [joinRoomId, setJoinRoomId] = useState<string>('');
-  const [language, setLanguage] = useState<string>('en');
+  const [language, setLanguage] = useState<string>('no language selected');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
