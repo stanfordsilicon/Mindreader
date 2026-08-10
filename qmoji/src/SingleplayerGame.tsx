@@ -158,7 +158,6 @@ function SingleplayerGame() {
         <h1>QMoji</h1>
         <p>
           Describe the emoji with up to four keywords in 30 seconds!
-          New game modes coming soon.
         </p>
         {!showEmoji && (
           <Start
