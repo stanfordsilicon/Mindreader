@@ -314,7 +314,7 @@ def submit_keywords(room_id):
 
     normalized = [kw.lower() for kw in input_stack]
     if len(normalized) != len(set(normalized)):
-        return flask.jsonify({"error": "Keywords must all be different"}), 400
+        return flask.jsonify({"error": "Seems like an easy way to cheat the system, luckily the devs have already thought of that!"}), 400
 
     try:
         save_submission(
