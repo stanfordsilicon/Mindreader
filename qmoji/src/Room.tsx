@@ -469,12 +469,12 @@ export default function Room() {
               </p>
 
               {!alreadySubmitted ? (
-                <form onSubmit={handleSubmit}>
-                  onKeydown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                    }
+                <form
+                  onSubmit={handleSubmit}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLFormElement>) => {
+                    if (e.key === 'Enter') e.preventDefault();
                   }}
+                > 
                   {keywords.map((kw, i) => (
                     <input
                       key={i}
