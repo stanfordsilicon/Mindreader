@@ -440,14 +440,6 @@ function SingleplayerGame() {
                     {isSubmitting ? 'Saving...' : 'Submit Keywords'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleTryAnother}
-                  style={{ flex: 1, margin: 0, width: submitSuccess ? '100%' : 'auto' }}
-                >
-                  Try another emoji
-                </button>
               </div>
             </form>
           </section>
