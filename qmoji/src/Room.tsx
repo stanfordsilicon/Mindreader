@@ -458,7 +458,7 @@ export default function Room() {
           {roomState.state === 'playing' && (
             <section>
               <div style={{ fontWeight: 'bold', marginBottom: '1rem', color: timeLeft <= 5 ? '#b42318' : 'inherit' }}>
-                {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up! Loading next emoji..."}
+                {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up!"}
               </div>
               <div style={{ fontSize: '3rem', textAlign: 'center', marginBottom: '1rem' }}>
                 {roomState.emoji}
@@ -470,6 +470,11 @@ export default function Room() {
 
               {!alreadySubmitted ? (
                 <form onSubmit={handleSubmit}>
+                  onKeydown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
                   {keywords.map((kw, i) => (
                     <input
                       key={i}
