@@ -297,7 +297,6 @@ def submit_keywords(room_id):
 
     if not keywords or not isinstance(keywords, list):
         return flask.jsonify({"error": "keywords must be a non-empty list"}), 400
-
     input_stack = [kw.strip() for kw in keywords if isinstance(kw, str) and kw.strip()]
     if not input_stack:
         return flask.jsonify({"error": "No valid keywords submitted"}), 400

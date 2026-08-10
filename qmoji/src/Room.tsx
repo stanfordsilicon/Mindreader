@@ -225,7 +225,7 @@ export default function Room() {
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
-        <h1>Welcome to Qmoji! Multiplayer Mode</h1>
+        <h1>=QMoji</h1>
         <p>
           Describe the emoji with up to four keywords in 30 seconds!
           Room ID: {roomId} | Round: {roomState?.round ?? 0}

@@ -154,7 +154,7 @@ function SingleplayerGame() {
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
-        <h1>Welcome to Qmoji! Singleplayer mode</h1>
+        <h1>QMoji</h1>
         <p>
           Describe the emoji with up to four keywords in 30 seconds!
           New game modes coming soon.
