@@ -133,13 +133,14 @@ function SingleplayerGame() {
   };
 
   const handleTryAnother = () => {
-    setShowEmoji(false);
-    setCurrentEmoji('');
-    setKeywords(['', '', '', '']);
-    setTimeLeft(30);
-    setError('');
-    setSubmitSuccess(false);
-    setRoundResults(null);
+    //setShowEmoji(false);
+    //setCurrentEmoji('');
+    //setKeywords(['', '', '', '']);
+    //setTimeLeft(30);
+    //setError('');
+    //setSubmitSuccess(false);
+    //setRoundResults(null);
+    handleRevealEmoji();
   };
 
   const getUserId = () => {
