@@ -162,8 +162,19 @@ def create_room():
     data = flask.request.get_json(silent=True) or {}
     language = data.get("language", "en")
     SinglePlayerOnlyForNow = data.get("single_player_only", True)
+    # requested_room_id arrives when QMoji 2.0 launched this game with a
+    # party already formed — the arcade room's code becomes this game's
+    # room id too (a substitution, not a second, parallel room-code system).
+    requested_room_id = data.get("room_id")
     if SinglePlayerOnlyForNow:
         room_id = "1"
+
+    elif requested_room_id:
+        room_id = str(requested_room_id).strip().upper()
+        if room_id in games:
+            # Someone else from the same arcade party already seeded this
+            # room — join the existing one instead of resetting its state.
+            return flask.jsonify({"room_id": room_id, "emoji": games[room_id]["current_emoji"]})
 
     else:
         room_id = str(uuid.uuid4())[:4].upper()

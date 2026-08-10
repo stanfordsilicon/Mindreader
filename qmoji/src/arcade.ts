@@ -1,0 +1,198 @@
+/*
+ * QMoji Arcade client (TypeScript port for the Vite/React apps).
+ *
+ * Talks only to the arcade API's three things: room code, roster, language —
+ * never gameplay data, which stays in each game's own Mongo cluster
+ * untouched. Locally, requests go through this app's own dev server at
+ * /arcade-api/v1/* (proxied server-side via vite.config.ts) because the
+ * real API's CORS allowlist covers *.vercel.app and specific onrender.com
+ * origins, not localhost. In production, requests go straight to the API.
+ */
+
+export interface ArcadePlayer {
+  playerId: string;
+  name: string;
+  joinedAt: string;
+}
+
+export interface ArcadeRoom {
+  code: string;
+  language: string;
+  playerId?: string;
+  players: ArcadePlayer[];
+  createdAt?: string;
+}
+
+export interface ArcadeParams {
+  room: string | null;
+  lang: string | null;
+  player: string | null;
+}
+
+export interface ArcadeInit {
+  room: ArcadeRoom;
+  roomCode: string;
+  lang: string;
+  playerId: string | null;
+}
+
+export class ArcadeError extends Error {
+  code: "not_found" | "conflict" | "unknown";
+  constructor(code: "not_found" | "conflict" | "unknown", message: string) {
+    super(message);
+    this.name = "ArcadeError";
+    this.code = code;
+  }
+}
+
+const PROD_API = "https://qmoji-arcade-api.vercel.app/api/v1";
+const PROD_HOMESCREEN = "https://qmoji-2.vercel.app";
+const LOCAL_HOMESCREEN = "http://localhost:5500";
+
+export function isLocal(): boolean {
+  return location.hostname === "localhost" || location.hostname === "127.0.0.1";
+}
+
+const API_BASE = isLocal() ? "/arcade-api/v1" : PROD_API;
+
+export function homescreenUrl(): string {
+  return isLocal() ? LOCAL_HOMESCREEN : PROD_HOMESCREEN;
+}
+
+// ---------------------------------------------------------------
+// Local player identity — a stable UUID cached in localStorage so
+// reloads and repeat visits reuse the same party member instead of
+// cloning them (the API already dedupes join calls on playerId).
+// ---------------------------------------------------------------
+const ID_KEY = "qmoji.arcade.playerId";
+const NAME_KEY = "qmoji.arcade.playerName";
+
+export function getSavedPlayerId(): string | null {
+  try { return localStorage.getItem(ID_KEY); } catch { return null; }
+}
+export function savePlayerId(id: string | null | undefined): void {
+  if (!id) return;
+  try { localStorage.setItem(ID_KEY, id); } catch { /* storage unavailable */ }
+}
+export function getSavedPlayerName(): string {
+  try { return localStorage.getItem(NAME_KEY) || ""; } catch { return ""; }
+}
+export function savePlayerName(name: string | null | undefined): void {
+  if (!name) return;
+  try { localStorage.setItem(NAME_KEY, name); } catch { /* storage unavailable */ }
+}
+export function ensurePlayerId(): string {
+  let id = getSavedPlayerId();
+  if (!id) {
+    id = crypto.randomUUID();
+    savePlayerId(id);
+  }
+  return id;
+}
+
+async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
+  return fetch(API_BASE + path, options);
+}
+
+export async function createRoom(hostName: string, language?: string): Promise<ArcadeRoom> {
+  const res = await apiFetch("/rooms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hostName, language: language || "en" }),
+  });
+  if (!res.ok) throw new ArcadeError("unknown", "Could not create room");
+  const room: ArcadeRoom = await res.json();
+  savePlayerId(room.playerId);
+  savePlayerName(hostName);
+  return room;
+}
+
+export async function joinRoom(code: string, name: string, playerId?: string): Promise<ArcadeRoom> {
+  const existingId = playerId || getSavedPlayerId();
+  const body: Record<string, string> = { name };
+  if (existingId) body.playerId = existingId;
+  const res = await apiFetch(`/rooms/${encodeURIComponent(code.toUpperCase())}/join`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 404) throw new ArcadeError("not_found", "No room with that code");
+  if (res.status === 409) throw new ArcadeError("conflict", "Room is full, or that name is taken");
+  if (!res.ok) throw new ArcadeError("unknown", "Could not join room");
+  const room: ArcadeRoom = await res.json();
+  savePlayerId(room.playerId);
+  savePlayerName(name);
+  return room;
+}
+
+export async function getRoom(code: string | null | undefined): Promise<ArcadeRoom | null> {
+  if (!code) return null;
+  const res = await apiFetch(`/rooms/${encodeURIComponent(code.toUpperCase())}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function setLanguage(code: string, language: string): Promise<Pick<ArcadeRoom, "code" | "language">> {
+  const res = await apiFetch(`/rooms/${encodeURIComponent(code.toUpperCase())}/language`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
+  });
+  if (!res.ok) throw new ArcadeError("unknown", "Could not set language");
+  return res.json();
+}
+
+// Lobby-only polling. Games fetch the room once on load and never poll,
+// per the contract's explicit "don't poll from inside a game."
+export function createPoller(code: string, onUpdate: (room: ArcadeRoom) => void, intervalMs = 3000) {
+  let timer: ReturnType<typeof setInterval> | null = null;
+  return {
+    start(): void {
+      if (timer) return;
+      timer = setInterval(async () => {
+        const fresh = await getRoom(code);
+        if (fresh) onUpdate(fresh);
+      }, intervalMs);
+    },
+    stop(): void {
+      if (timer) clearInterval(timer);
+      timer = null;
+    },
+  };
+}
+
+export function readParams(): ArcadeParams {
+  const params = new URLSearchParams(location.search);
+  return { room: params.get("room"), lang: params.get("lang"), player: params.get("player") };
+}
+
+// Called once on load by every game. Returns null (never throws) when
+// there's no room param or the lookup fails — the caller's existing
+// standalone start screen is always the fallback, per the contract:
+// "the arcade layer is an enhancement, not a dependency."
+export async function initArcade(): Promise<ArcadeInit | null> {
+  const params = readParams();
+  if (!params.room) return null;
+  const room = await getRoom(params.room);
+  if (!room) return null;
+  if (params.player) savePlayerId(params.player);
+  if (params.lang) {
+    // Plumbing only for now: receive/store the ISO code so it round-trips
+    // correctly. On-screen translation wiring lands in a later pass.
+    try { localStorage.setItem("qmoji.lang", params.lang); } catch { /* storage unavailable */ }
+    document.documentElement.lang = params.lang;
+  }
+  return { room, roomCode: params.room, lang: params.lang || room.language, playerId: params.player };
+}
+
+export function launchUrl(baseUrl: string, roomCode?: string, lang?: string, playerId?: string | null): string {
+  const url = new URL(baseUrl);
+  if (roomCode) url.searchParams.set("room", roomCode);
+  if (lang) url.searchParams.set("lang", lang);
+  if (playerId) url.searchParams.set("player", playerId);
+  return url.toString();
+}
+
+export function backToHomescreenUrl(roomCode?: string, lang?: string, playerId?: string | null): string {
+  return launchUrl(homescreenUrl(), roomCode, lang, playerId);
+}
