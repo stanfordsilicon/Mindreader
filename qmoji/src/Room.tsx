@@ -169,14 +169,8 @@ export default function Room() {
       return () => window.clearTimeout(timer);
     }
 
-    if (timeLeft === 0) {
-      // Show everyone the results once time is up, regardless of host status
-      if (!roundResults || roundResults.round !== roomState.round) {
-        fetchRoundResults();
-      }
-      if (isHost) {
-        handleStartRound();
-      }
+    if (!roundResults || roundResults.round !== roomState.round) {
+      fetchRoundResults();
     }
   }, [roomState?.state, roomState?.round, timeLeft, isHost, handleStartRound, fetchRoundResults, roundResults]);
 
