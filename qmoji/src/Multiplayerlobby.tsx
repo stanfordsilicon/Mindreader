@@ -9,7 +9,7 @@ export const Multiplayerlobby: React.FC = () => {
   // State management
   const [username, setUsername] = useState<string>('');
   const [joinRoomId, setJoinRoomId] = useState<string>('');
-  const [language, setLanguage] = useState<string>('no language selected');
+  const [language, setLanguage] = useState<string>('English');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -130,14 +130,12 @@ export const Multiplayerlobby: React.FC = () => {
       {/* Action 1: Create Room */}
       <section style={{ marginBottom: '2rem' }}>
         <h3>Host a Game</h3>
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ marginRight: '0.5rem' }}>Language: </label>
+        <div className="language-selector">
+          <label htmlFor="language-input">Language for your keywords?</label>
           <input
-            type="text"
+            id="language-input"
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            placeholder="no language selected"
-            autoComplete="off"
             disabled={isLoading}
           />
         </div>
