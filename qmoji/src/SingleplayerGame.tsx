@@ -15,7 +15,7 @@ function SingleplayerGame() {
   const [showEmoji, setShowEmoji] = useState(false);
   const [currentEmoji, setCurrentEmoji] = useState('');
   const [keywords, setKeywords] = useState(['', '', '', '']);
-  const [language, setLanguage] = useState<string>('no language selected');
+  const [inputLanguage, setInputLanguage] = useState('English');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
