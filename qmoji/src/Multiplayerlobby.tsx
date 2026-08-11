@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 
 export const Multiplayerlobby: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
 
   // State management
+  const language = (location.state as { language?: string } | null)?.language || 'English';
   const [username, setUsername] = useState<string>('');
   const [joinRoomId, setJoinRoomId] = useState<string>('');
-  const [language, setLanguage] = useState<string>('English');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -130,15 +131,6 @@ export const Multiplayerlobby: React.FC = () => {
       {/* Action 1: Create Room */}
       <section style={{ marginBottom: '2rem' }}>
         <h3>Host a Game</h3>
-        <div className="language-selector">
-          <label htmlFor="language-input">Language for your keywords?</label>
-          <input
-            id="language-input"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            disabled={isLoading}
-          />
-        </div>
         <button 
           onClick={handleCreateRoom} 
           disabled={isLoading}

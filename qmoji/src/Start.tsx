@@ -13,7 +13,7 @@ function Start({ inputLanguage, setInputLanguage, onReveal, isLoading }: StartVa
     if (mode === 'single') {
       onReveal();
     } else if (mode === 'multi') {
-      navigate('/multiplayer');
+      navigate('/multiplayer', { state: { language: inputLanguage } });
     } else {
         throw new Error('Neither singleplayer nor multiplayer selected.');
     }
