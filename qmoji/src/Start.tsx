@@ -53,7 +53,7 @@ function Start({ inputLanguage, setInputLanguage, maxRounds, setMaxRounds, onRev
       <div className="qmoji-mode-grid">
         <button className="qmoji-mode-card single" onClick={() => handleModeSelect('single')} disabled={isLoading}>
           <h4>Singleplayer</h4>
-          <p>{isLoading ? 'Loading emoji...' : 'Race against the clock'}</p>
+          <p>{isLoading ? 'Loading emoji...' : 'Currently in development'}</p>
         </button>
         <button className="qmoji-mode-card multi" onClick={() => handleModeSelect('multi')}>
           <h4>Multiplayer</h4>

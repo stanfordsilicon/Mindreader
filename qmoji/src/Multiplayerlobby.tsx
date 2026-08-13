@@ -78,7 +78,7 @@ export const Multiplayerlobby: React.FC = () => {
       <div className="qmoji-header-row">
         <button className="qmoji-icon-btn" onClick={() => navigate(-1)} aria-label="Back">↩</button>
       </div>
-      <h1 className="qmoji-title">QMoji</h1>
+      <h1 className="qmoji-title">Mindreader</h1>
       <p className="qmoji-subtitle">Describe the emoji with up to four keywords in 30 seconds!</p>
 
       {error && (
