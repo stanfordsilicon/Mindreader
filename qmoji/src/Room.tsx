@@ -212,10 +212,24 @@ export default function Room() {
     }
   };
 
-  const handleLeave = () => {
-    localStorage.removeItem('qmoji_current_room');
-    navigate('/multiplayer');
-  };
+  const handleLeave = async () => {
+  if (roomId && userId) {
+    try {
+      // 1. Tell backend to remove player from room state
+      await fetch(`${API_BASE_URL}/${roomId}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      });
+    } catch (err) {
+      console.error('Failed to notify backend on leave:', err);
+    }
+  }
+
+  // 2. Clear local storage and navigate back
+  localStorage.removeItem('qmoji_current_room');
+  navigate('/multiplayer');
+};
 
   const alreadySubmitted = roomState?.submitted_user_ids.includes(userId ?? '') ?? false;
 
@@ -231,7 +245,7 @@ export default function Room() {
         <button className="qmoji-icon-btn" onClick={handleLeave} aria-label="Leave room">↩</button>
         <span className="qmoji-room-code">{roomId}</span>
       </div>
-      <h1 className="qmoji-title">QMoji 1.0</h1>
+      <h1 className="qmoji-title">QMoji</h1>
       <p className="qmoji-subtitle">Describe the emoji with up to four keywords in 30 seconds!</p>
 
       {error && (

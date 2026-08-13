@@ -1,3 +1,4 @@
+from http.client import HTTPException
 import random
 import flask
 from flask_cors import CORS
@@ -269,6 +270,22 @@ def join_room(room_id):
         )
 
     return flask.jsonify({"message": "Joined successfully", "players": game["players"]})
+
+@app.post("/{room_id}/leave")
+def leave_room(room_id: str, payload: dict):
+    user_id = payload.get("user_id")
+    room = rooms.get(room_id)
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    room["players"] = [p for p in room["players"] if p["user_id"] != user_id]
+    room["scores"].pop(user_id, None)
+    if user_id in room["submitted_user_ids"]:
+        room["submitted_user_ids"].remove(user_id)
+    room["total_players"] = len(room["players"])
+
+    return {"success": True}
+
+
 
 @app.route("/<room_id>/start_round", methods=["POST"])
 def start_round(room_id):
