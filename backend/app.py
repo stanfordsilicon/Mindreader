@@ -51,6 +51,7 @@ language = "no_language" \
 "" \
 "-submitted"
 seconds_per_round = 30
+MAX_rounds = 16
 
 # -------#
 
@@ -275,6 +276,10 @@ def start_round(room_id):
     game = games.get(room_id)
     if not game:
         return flask.jsonify({"error": "Room not found"}), 404
+
+    if game["round"] >= MAX_rounds:
+        game["state"] = "ended"
+        return flask.jsonify({"error": "Max rounds reached", "round": game["round"], "state": "ended"}), 400
 
     game["current_emoji"] = random.choice(emoji_list)
     game["submissions"] = {}

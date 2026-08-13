@@ -20,15 +20,15 @@ type RoomState = {
 type RoundResults = {
   round: number;
   emoji: string;
-  results: Record<string, Record<string, number>>; // user_id -> { word: count }
-  round_scores: Record<string, number>; // user_id -> points earned this round
-  total_scores: Record<string, number>; // user_id -> running total
+  results: Record<string, Record<string, number>>;
+  round_scores: Record<string, number>;
+  total_scores: Record<string, number>;
 };
 
 export default function Room() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  
+
   const [roomState, setRoomState] = useState<RoomState | null>(null);
   const [hasJoined, setHasJoined] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ export default function Room() {
 
   const userId = localStorage.getItem('qmoji_user_id');
   const username = localStorage.getItem('qmoji_username');
-  
+
   const [keywords, setKeywords] = useState(['', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -47,7 +47,6 @@ export default function Room() {
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
 
-  // Derive host status dynamically (first player in list)
   const isHost = Boolean(roomState?.players[0]?.user_id && roomState.players[0].user_id === userId);
 
   const getPlayerName = useCallback(
@@ -160,7 +159,6 @@ export default function Room() {
     }
   }, [roomId, fetchState]);
 
-  // Single Timer & Auto-advance hook
   useEffect(() => {
     if (roomState?.state !== 'playing') return;
 
@@ -214,30 +212,41 @@ export default function Room() {
     }
   };
 
+  const handleLeave = () => {
+    localStorage.removeItem('qmoji_current_room');
+    navigate('/multiplayer');
+  };
+
   const alreadySubmitted = roomState?.submitted_user_ids.includes(userId ?? '') ?? false;
 
+  const sortedScoreboard = roomState
+    ? [...roomState.players]
+        .map((p) => ({ ...p, score: roomState.scores[p.user_id] ?? 0 }))
+        .sort((a, b) => b.score - a.score)
+    : [];
+
   return (
-    <main className="qmoji-app">
-      <header className="qmoji-header">
-        <h1>=QMoji</h1>
-        <p>
-          Describe the emoji with up to four keywords in 30 seconds!
-          Room ID: {roomId} | Round: {roomState?.round ?? 0}
-        </p>
-      </header>
+    <div className="qmoji-card">
+      <div className="qmoji-header-row">
+        <button className="qmoji-icon-btn" onClick={handleLeave} aria-label="Leave room">↩</button>
+        <span className="qmoji-room-code">{roomId}</span>
+      </div>
+      <h1 className="qmoji-title">QMoji 1.0</h1>
+      <p className="qmoji-subtitle">Describe the emoji with up to four keywords in 30 seconds!</p>
 
       {error && (
-        <p className="qmoji-error" role="alert">
+        <div style={{ color: '#ffb4a8', background: 'rgba(192,57,43,0.25)', borderRadius: 8, padding: '8px 12px', marginBottom: '14px', fontSize: '0.75rem', textAlign: 'center' }}>
           {error}
-        </p>
+        </div>
       )}
 
       {submitSuccess && !showResults && (
-        <p className="qmoji-success" role="alert" style={{ color: 'green', fontWeight: 'bold', textAlign: 'center' }}>
+        <p style={{ color: 'var(--qmoji-green-bright)', fontWeight: 'bold', textAlign: 'center', fontSize: '0.8rem' }}>
           Successfully saved your keywords!
         </p>
       )}
 
+      {/* ---- Round results modal ---- */}
       {showResults && (
         <div
           role="dialog"
@@ -245,70 +254,36 @@ export default function Room() {
           aria-label="Round results"
           onClick={() => setShowResults(false)}
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            zIndex: 1000,
+            position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px', zIndex: 1000,
           }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'white',
-              borderRadius: '16px',
-              padding: '24px',
-              width: '100%',
-              maxWidth: '420px',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              boxShadow: '0 12px 40px rgba(0, 0, 0, 0.25)',
-              position: 'relative',
-            }}
+            className="qmoji-panel-yellow"
+            style={{ width: '100%', maxWidth: '380px', maxHeight: '80vh', overflowY: 'auto', position: 'relative', boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}
           >
             <button
               type="button"
               onClick={() => setShowResults(false)}
               aria-label="Close"
-              style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                border: 'none',
-                background: 'transparent',
-                fontSize: '1.25rem',
-                cursor: 'pointer',
-                lineHeight: 1,
-                padding: '4px',
-              }}
+              style={{ position: 'absolute', top: '10px', right: '10px', border: 'none', background: 'transparent', fontSize: '1.1rem', cursor: 'pointer', lineHeight: 1, padding: '4px', color: 'var(--qmoji-ink)' }}
             >
               ✕
             </button>
 
-            <h3 style={{ textAlign: 'center', marginTop: 0, marginBottom: '4px' }}>
-              How everyone answered {roundResults?.emoji ?? roomState?.emoji}
-            </h3>
+            <h3>Let's see what {getPlayerName(roomState?.players?.[0]?.user_id ?? '')} answered...</h3>
 
             {isLoadingResults ? (
-              <p style={{ textAlign: 'center' }}>Loading results...</p>
+              <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>Loading results...</p>
             ) : roundResults ? (
               <>
                 {userId && (
-                  <p
-                    style={{
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      fontSize: '1.1rem',
-                      color: '#2e7d32',
-                      margin: '8px 0 16px',
-                    }}
-                  >
+                  <p style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#1e4620', margin: '0 0 14px' }}>
                     +{roundResults.round_scores?.[userId] ?? 0} points
                     {roundResults.total_scores?.[userId] !== undefined && (
-                      <span style={{ fontWeight: 500, color: '#555', display: 'block', fontSize: '0.85rem' }}>
+                      <span style={{ fontWeight: 500, display: 'block', fontSize: '0.7rem', opacity: 0.75 }}>
                         total: {roundResults.total_scores[userId]}
                       </span>
                     )}
@@ -316,109 +291,41 @@ export default function Room() {
                 )}
 
                 {Object.entries(roundResults.results).map(([id, words]) => {
-                  // Only show words that scored above 0 -- a 0 means nobody
-                  // else guessed it, so there's nothing meaningful to display.
                   const sortedWords = Object.entries(words)
                     .filter(([, count]) => count > 0)
                     .sort(([, a], [, b]) => b - a);
 
-                  if (sortedWords.length === 0) {
-                    return (
-                      <div key={id} style={{ marginBottom: '20px' }}>
-                        <strong>{getPlayerName(id)}</strong>
-                        <p style={{ color: '#888', margin: '8px 0 0', fontStyle: 'italic' }}>
-                          0 points
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  const maxCount = Math.max(...sortedWords.map(([, c]) => c), 1);
-
                   return (
-                    <div key={id} style={{ marginBottom: '20px' }}>
-                      <strong>{getPlayerName(id)}</strong>
-                      <ul style={{ listStyle: 'none', padding: 0, marginTop: '8px' }}>
-                        {sortedWords.map(([word, count], index) => (
-                          <li
-                            key={word}
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr auto',
-                              alignItems: 'center',
-                              gap: '8px',
-                              marginBottom: '6px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                position: 'relative',
-                                background: '#eee',
-                                borderRadius: '6px',
-                                overflow: 'hidden',
-                                height: '28px',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  left: 0,
-                                  top: 0,
-                                  bottom: 0,
-                                  width: `${(count / maxCount) * 100}%`,
-                                  background: '#4CAF50',
-                                  transition: 'width 0.4s ease',
-                                  transitionDelay: `${index * 80}ms`,
-                                }}
-                              />
-                              <span
-                                style={{
-                                  position: 'relative',
-                                  padding: '0 10px',
-                                  lineHeight: '28px',
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {word}
-                              </span>
+                    <div key={id} style={{ marginBottom: '18px' }}>
+                      <strong style={{ fontSize: '0.8rem' }}>{getPlayerName(id)}</strong>
+                      {sortedWords.length === 0 ? (
+                        <p style={{ opacity: 0.7, margin: '8px 0 0', fontStyle: 'italic', fontSize: '0.75rem' }}>
+                          0 points — no matching words
+                        </p>
+                      ) : (
+                        <div className="qmoji-word-grid" style={{ marginTop: 8 }}>
+                          {sortedWords.map(([word, count]) => (
+                            <div key={word} className={`qmoji-word-box ${count > 0 ? 'match' : ''}`}>
+                              {word} <span style={{ opacity: 0.8, fontWeight: 500 }}>({count})</span>
                             </div>
-                            <span
-                              style={{
-                                fontWeight: 'bold',
-                                minWidth: '24px',
-                                textAlign: 'right',
-                              }}
-                            >
-                              {count}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
               </>
             ) : (
-              <p style={{ textAlign: 'center' }}>No results yet.</p>
+              <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>No results yet.</p>
             )}
 
             {isHost && (
               <button
                 type="button"
+                className="qmoji-btn qmoji-btn-green"
                 onClick={handleStartRound}
                 disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '12px 24px',
-                  backgroundColor: '#4CAF50',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '999px',
-                  cursor: 'pointer',
-                  font: 'inherit',
-                  fontWeight: 500,
-                  marginTop: '8px',
-                }}
+                style={{ marginTop: '10px' }}
               >
                 {isSubmitting ? 'Loading...' : 'Next round'}
               </button>
@@ -427,44 +334,51 @@ export default function Room() {
         </div>
       )}
 
+      {/* ---- Main room states ---- */}
       {!roomState ? (
-        <p>Loading room...</p>
+        <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>Loading room...</p>
       ) : (
         <>
-          <section style={{ marginBottom: '1.5rem' }}>
-            <h3>Players ({roomState.total_players})</h3>
-            <ul>
-              {roomState.players.map((p, index) => (
-                <li key={p.user_id}>
-                  {p.name} {index === 0 ? '👑 (Host)' : ''} {p.user_id === userId ? '(you)' : ''} — score: {roomState.scores[p.user_id] ?? 0}
-                </li>
-              ))}
-            </ul>
-          </section>
-
           {roomState.state === 'waiting' && (
-            <section>
-              <p>Waiting for players. Share room code <strong>{roomId}</strong> with friends.</p>
+            <div className="qmoji-panel-yellow">
+              <h3>Waiting for all players...</h3>
+              <div className="qmoji-pill-row">
+                {roomState.players.map((p, index) => (
+                  <span key={p.user_id} className={`qmoji-pill ${index === 0 ? 'host' : ''}`}>
+                    {p.name}{p.user_id === userId ? ' (you)' : ''}
+                  </span>
+                ))}
+              </div>
+
               {isHost ? (
-                <button onClick={handleStartRound} style={{ padding: '0.75rem 1.5rem' }}>
-                  Start Game
+                <button className="qmoji-btn qmoji-btn-green" onClick={handleStartRound} disabled={isSubmitting} style={{ marginTop: 8 }}>
+                  {isSubmitting ? 'Starting...' : 'Start'}
                 </button>
               ) : (
-                <p>Waiting for the host to start...</p>
+                <button className="qmoji-btn qmoji-btn-red" onClick={handleLeave} style={{ marginTop: 8 }}>
+                  Leave
+                </button>
               )}
-            </section>
+              <p style={{ fontSize: '0.65rem', textAlign: 'center', marginTop: 10, opacity: 0.8 }}>
+                Share room code <strong>{roomId}</strong> with friends
+              </p>
+            </div>
           )}
 
           {roomState.state === 'playing' && (
-            <section>
-              <div style={{ fontWeight: 'bold', marginBottom: '1rem', color: timeLeft <= 5 ? '#b42318' : 'inherit' }}>
-                {timeLeft > 0 ? `Time remaining: ${timeLeft}s` : "Time's up!"}
+            <div>
+              <div style={{
+                fontFamily: 'var(--font-display)', fontSize: '0.75rem', textAlign: 'center',
+                marginBottom: 14, color: timeLeft <= 5 ? '#ff8a75' : timeLeft <= 15 ? 'var(--qmoji-yellow)' : 'var(--qmoji-white)',
+              }}>
+                {timeLeft > 0 ? `${timeLeft}s` : "Time's up!"}
               </div>
-              <div style={{ fontSize: '3rem', textAlign: 'center', marginBottom: '1rem' }}>
+
+              <div style={{ fontSize: '4rem', textAlign: 'center', marginBottom: 16 }}>
                 {roomState.emoji}
               </div>
 
-              <p style={{ textAlign: 'center' }}>
+              <p style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.8, marginBottom: 14 }}>
                 {roomState.submitted_count} / {roomState.total_players} players have submitted
               </p>
 
@@ -474,44 +388,79 @@ export default function Room() {
                   onKeyDown={(e: React.KeyboardEvent<HTMLFormElement>) => {
                     if (e.key === 'Enter') e.preventDefault();
                   }}
-                > 
-                  {keywords.map((kw, i) => (
-                    <input
-                      key={i}
-                      type="text"
-                      value={kw}
-                      placeholder={`Keyword ${i + 1}`}
-                      onChange={(e) => handleKeywordChange(i, e.target.value)}
-                      disabled={isSubmitting || timeLeft === 0}
-                      style={{ display: 'block', width: '100%', padding: '0.5rem', marginBottom: '0.5rem' }}
-                    />
-                  ))}
-                  <button type="submit" disabled={isSubmitting || timeLeft === 0} style={{ padding: '0.75rem 1.5rem', width: '100%' }}>
-                    {isSubmitting ? 'Saving...' : 'Submit Keywords'}
+                >
+                  <div className="qmoji-word-grid" style={{ marginBottom: 14 }}>
+                    {keywords.map((kw, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        className="qmoji-input"
+                        value={kw}
+                        placeholder={`Keyword ${i + 1}`}
+                        onChange={(e) => handleKeywordChange(i, e.target.value)}
+                        disabled={isSubmitting || timeLeft === 0}
+                      />
+                    ))}
+                  </div>
+                  <button type="submit" className="qmoji-btn qmoji-btn-green" disabled={isSubmitting || timeLeft === 0}>
+                    {isSubmitting ? 'Saving...' : 'Enter word'}
                   </button>
                 </form>
               ) : (
-                <p style={{ textAlign: 'center', fontStyle: 'italic', marginTop: '1rem' }}>
+                <p style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '0.75rem', opacity: 0.8 }}>
                   Waiting for other players or timer expiration...
                 </p>
               )}
 
               {(roomState.submitted_count === roomState.total_players || isHost) && (
-                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={fetchRoundResults}
-                    disabled={isLoadingResults}
-                    style={{ padding: '0.75rem 1.5rem', backgroundColor: '#6c757d', color: '#fff', border: 'none', borderRadius: '4px', marginRight: isHost ? '0.5rem' : 0 }}
-                  >
-                    {isLoadingResults ? 'Loading...' : 'See results'}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="qmoji-btn"
+                  onClick={fetchRoundResults}
+                  disabled={isLoadingResults}
+                  style={{ marginTop: 16, background: 'var(--qmoji-teal-deep)', color: 'var(--qmoji-ink)' }}
+                >
+                  {isLoadingResults ? 'Loading...' : 'See results'}
+                </button>
               )}
-            </section>
+            </div>
+          )}
+
+          {roomState.state === 'ended' && (
+            <div className="qmoji-panel-yellow">
+              <h3>Final Scores</h3>
+              {sortedScoreboard.map((p, index) => (
+                <div key={p.user_id} className={`qmoji-score-row ${index === 0 ? 'leader' : ''}`}>
+                  <span>{index === 0 ? '👑 ' : ''}{p.name}{p.user_id === userId ? ' (you)' : ''}</span>
+                  <span>{p.score}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+                <button className="qmoji-btn qmoji-btn-red" onClick={handleLeave}>Leave</button>
+                {isHost && (
+                  <button className="qmoji-btn qmoji-btn-green" onClick={handleStartRound}>
+                    Play again
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Always-visible scoreboard while a round is in progress */}
+          {roomState.state === 'playing' && (
+            <div style={{ marginTop: 20 }}>
+              {sortedScoreboard.map((p, index) => (
+                <div key={p.user_id} className={`qmoji-score-row ${index === 0 ? 'leader' : ''}`}>
+                  <span>{index === 0 ? '👑 ' : ''}{p.name}{p.user_id === userId ? ' (you)' : ''}</span>
+                  <span>{p.score}</span>
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}
-    </main>
+
+      <p className="qmoji-footer">Powered by SILICON @ Stanford</p>
+    </div>
   );
 }
