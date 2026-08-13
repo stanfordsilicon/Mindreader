@@ -271,19 +271,32 @@ def join_room(room_id):
 
     return flask.jsonify({"message": "Joined successfully", "players": game["players"]})
 
-@app.post("/{room_id}/leave")
-def leave_room(room_id: str, payload: dict):
-    user_id = payload.get("user_id")
-    room = rooms.get(room_id)
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
-    room["players"] = [p for p in room["players"] if p["user_id"] != user_id]
-    room["scores"].pop(user_id, None)
-    if user_id in room["submitted_user_ids"]:
-        room["submitted_user_ids"].remove(user_id)
-    room["total_players"] = len(room["players"])
+@app.route("/<room_id>/leave", methods=["POST"])
+def leave_room(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
 
-    return {"success": True}
+    data = flask.request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return flask.jsonify({"error": "user_id is required"}), 400
+    game["players"] = [p for p in game["players"] if p["user_id"] != user_id]
+    
+    # 2. Remove player scores & round submissions
+    game["scores"].pop(user_id, None)
+    game["submissions"].pop(user_id, None)
+
+    # 3. Clean up database record
+    players_col.delete_one({"_id": f"{room_id}_{user_id}"})
+
+    # 4. If room is now empty, delete room from memory & DB
+    if not game["players"]:
+        games.pop(room_id, None)
+        rooms_col.delete_one({"_id": room_id})
+
+    return flask.jsonify({"success": True})
 
 
 
