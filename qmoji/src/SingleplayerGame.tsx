@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Start from './Start';
+import { canStartNextRound } from './roundUtils.js';
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
 
@@ -23,6 +24,9 @@ function SingleplayerGame() {
   const [timeLeft, setTimeLeft] = useState(30);
   const [roundResults, setRoundResults] = useState<RoundResults | null>(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [maxRounds, setMaxRounds] = useState(16);
+  const [roundCount, setRoundCount] = useState(0);
+  const [gameComplete, setGameComplete] = useState(false);
 
   useEffect(() => {
     let timer: number;
@@ -37,6 +41,19 @@ function SingleplayerGame() {
   }, [showEmoji, timeLeft, submitSuccess]);
 
   const handleRevealEmoji = async () => {
+    if (gameComplete) {
+      setGameComplete(false);
+      setRoundCount(0);
+    }
+
+    if (!canStartNextRound(roundCount, maxRounds, submitSuccess)) {
+      setGameComplete(true);
+      setShowEmoji(false);
+      setCurrentEmoji('');
+      setError('');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
     setSubmitSuccess(false);
@@ -57,6 +74,7 @@ function SingleplayerGame() {
       setKeywords(['', '', '', '']);
       setTimeLeft(30);
       setShowEmoji(true);
+      setRoundCount((prev) => prev + 1);
     } catch (fetchError) {
       const message =
         fetchError instanceof Error
@@ -100,6 +118,13 @@ function SingleplayerGame() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    if (roundCount >= maxRounds) {
+      setGameComplete(true);
+      setShowEmoji(false);
+      setCurrentEmoji('');
+      return;
+    }
+
     const filledKeywords = keywords.filter((kw) => kw.trim() !== '');
     if (filledKeywords.length === 0) {
       setError('Please fill out at least one keyword before submitting.');
@@ -133,13 +158,14 @@ function SingleplayerGame() {
   };
 
   const handleTryAnother = () => {
-    setShowEmoji(false);
-    setCurrentEmoji('');
-    setKeywords(['', '', '', '']);
-    setTimeLeft(30);
-    setError('');
-    setSubmitSuccess(false);
-    setRoundResults(null);
+    if (roundCount >= maxRounds) {
+      setGameComplete(true);
+      setShowEmoji(false);
+      setCurrentEmoji('');
+      return;
+    }
+
+    handleRevealEmoji();
   };
 
   const getUserId = () => {
@@ -157,7 +183,6 @@ function SingleplayerGame() {
         <h1>QMoji</h1>
         <p>
           Describe the emoji with up to four keywords in 30 seconds!
-          New game modes coming soon.
         </p>
         {!showEmoji && (
           <Start
@@ -165,6 +190,8 @@ function SingleplayerGame() {
             setInputLanguage={setInputLanguage}
             onReveal={handleRevealEmoji}
             isLoading={isLoading}
+            maxRounds={maxRounds}
+            setMaxRounds={setMaxRounds}
           />
         )}
       </header>
@@ -356,15 +383,22 @@ function SingleplayerGame() {
       )}
 
       {!showEmoji ? (
-        <section className="qmoji-stage" aria-live="polite">
-          <button
-            type="button"
-            className="reveal-button"
-            onClick={handleRevealEmoji}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading emoji...' : 'Show me an emoji!'}
-          </button>
+        <section className="qmoji-stage" aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {gameComplete ? (
+            <>
+              <h2 style={{ margin: 0 }}>Session complete</h2>
+              <p style={{ margin: 0 }}>You finished {maxRounds} rounds. Start another session to play again.</p>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="reveal-button"
+              onClick={handleRevealEmoji}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Loading emoji...' : 'Show me an emoji!'}
+            </button>
+          )}
         </section>
       ) : (
         <div className="workspace-container">
@@ -439,14 +473,6 @@ function SingleplayerGame() {
                     {isSubmitting ? 'Saving...' : 'Submit Keywords'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleTryAnother}
-                  style={{ flex: 1, margin: 0, width: submitSuccess ? '100%' : 'auto' }}
-                >
-                  Try another emoji
-                </button>
               </div>
             </form>
           </section>

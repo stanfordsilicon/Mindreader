@@ -1,3 +1,4 @@
+from http.client import HTTPException
 import random
 import flask
 from flask_cors import CORS
@@ -51,6 +52,7 @@ language = "no_language" \
 "" \
 "-submitted"
 seconds_per_round = 30
+MAX_rounds = 16
 
 # -------#
 
@@ -269,12 +271,45 @@ def join_room(room_id):
 
     return flask.jsonify({"message": "Joined successfully", "players": game["players"]})
 
+@app.route("/<room_id>/leave", methods=["POST"])
+def leave_room(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    data = flask.request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+
+    if not user_id:
+        return flask.jsonify({"error": "user_id is required"}), 400
+    game["players"] = [p for p in game["players"] if p["user_id"] != user_id]
+    
+    # 2. Remove player scores & round submissions
+    game["scores"].pop(user_id, None)
+    game["submissions"].pop(user_id, None)
+
+    # 3. Clean up database record
+    players_col.delete_one({"_id": f"{room_id}_{user_id}"})
+
+    # 4. If room is now empty, delete room from memory & DB
+    if not game["players"]:
+        games.pop(room_id, None)
+        rooms_col.delete_one({"_id": room_id})
+
+    return flask.jsonify({"success": True})
+
+
+
 @app.route("/<room_id>/start_round", methods=["POST"])
 def start_round(room_id):
     # updates the game state for the next round, and sends it to the frontend
     game = games.get(room_id)
     if not game:
         return flask.jsonify({"error": "Room not found"}), 404
+
+    if game["round"] >= MAX_rounds:
+        game["state"] = "ended"
+        return flask.jsonify({"error": "Max rounds reached", "round": game["round"], "state": "ended"}), 400
 
     game["current_emoji"] = random.choice(emoji_list)
     game["submissions"] = {}
@@ -311,6 +346,10 @@ def submit_keywords(room_id):
     input_stack = [kw.strip() for kw in keywords if isinstance(kw, str) and kw.strip()]
     if not input_stack:
         return flask.jsonify({"error": "No valid keywords submitted"}), 400
+
+    normalized = [kw.lower() for kw in input_stack]
+    if len(normalized) != len(set(normalized)):
+        return flask.jsonify({"error": "Seems like an easy way to cheat the system, luckily the devs have already thought of that!"}), 400
 
     try:
         save_submission(

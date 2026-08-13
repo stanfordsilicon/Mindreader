@@ -1,0 +1,252 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --qmoji-purple: #5b2a52;
+  --qmoji-purple-deep: #3a1a34;
+  --qmoji-yellow: #c7a53c;
+  --qmoji-yellow-deep: #a3841f;
+  --qmoji-teal: #7ed3d8;
+  --qmoji-teal-deep: #4bb3ba;
+  --qmoji-green: #5cb85c;
+  --qmoji-green-bright: #6fd94a;
+  --qmoji-red: #c0392b;
+  --qmoji-cream: #f2ede0;
+  --qmoji-white: #ffffff;
+  --qmoji-ink: #241021;
+
+  --font-display: 'Press Start 2P', monospace;
+  --font-body: 'Space Mono', monospace;
+
+  --radius-card: 24px;
+  --radius-box: 14px;
+  --radius-pill: 999px;
+}
+
+body {
+  margin: 0;
+  background: var(--qmoji-purple-deep);
+  font-family: var(--font-body);
+  color: var(--qmoji-white);
+}
+
+/* ---- Card shell (every screen sits inside this) ---- */
+.qmoji-card {
+  background: var(--qmoji-purple);
+  border-radius: var(--radius-card);
+  padding: 28px 24px 20px;
+  max-width: 420px;
+  margin: 3rem auto;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+  position: relative;
+  color: var(--qmoji-white);
+}
+
+.qmoji-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.qmoji-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--qmoji-ink);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--qmoji-white);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+}
+.qmoji-icon-btn:hover { filter: brightness(1.2); }
+
+.qmoji-room-code {
+  font-family: var(--font-display);
+  color: var(--qmoji-green-bright);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  align-self: flex-start;
+}
+
+.qmoji-title {
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  text-align: center;
+  margin: 6px 0 10px;
+  letter-spacing: 1px;
+}
+
+.qmoji-subtitle {
+  text-align: center;
+  font-size: 0.8rem;
+  opacity: 0.85;
+  line-height: 1.5;
+  margin: 0 0 22px;
+}
+
+.qmoji-footer {
+  text-align: center;
+  font-size: 0.55rem;
+  letter-spacing: 0.5px;
+  opacity: 0.6;
+  margin-top: 22px;
+}
+
+/* ---- Buttons ---- */
+.qmoji-btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  width: 100%;
+  transition: filter 0.15s ease, transform 0.05s ease;
+}
+.qmoji-btn:active { transform: scale(0.98); }
+.qmoji-btn:disabled { background: #8a8a8a !important; cursor: not-allowed; }
+
+.qmoji-btn-green { background: var(--qmoji-green); color: white; }
+.qmoji-btn-green:hover:not(:disabled) { filter: brightness(1.08); }
+
+.qmoji-btn-red { background: var(--qmoji-red); color: white; }
+.qmoji-btn-red:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* ---- Mode select cards (Singleplayer / Multiplayer) ---- */
+.qmoji-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 18px 0;
+}
+.qmoji-mode-card {
+  background: var(--qmoji-teal);
+  border-radius: var(--radius-box);
+  padding: 16px 10px;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  color: var(--qmoji-ink);
+  font-family: var(--font-body);
+}
+.qmoji-mode-card.multi { background: var(--qmoji-yellow); }
+.qmoji-mode-card h4 {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+.qmoji-mode-card p { font-size: 0.6rem; margin: 0; opacity: 0.75; }
+.qmoji-mode-card:hover { filter: brightness(1.05); }
+
+/* ---- Panels (host controls, round results, leaderboards) ---- */
+.qmoji-panel-yellow {
+  background: var(--qmoji-yellow);
+  border-radius: var(--radius-box);
+  padding: 16px;
+  color: var(--qmoji-ink);
+}
+.qmoji-panel-yellow h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  text-align: center;
+  margin: 0 0 14px;
+}
+
+/* ---- Inputs ---- */
+.qmoji-input, .qmoji-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: var(--qmoji-cream);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--qmoji-ink);
+  box-sizing: border-box;
+}
+.qmoji-field { margin-bottom: 12px; }
+.qmoji-field label {
+  display: block;
+  font-size: 0.7rem;
+  margin-bottom: 6px;
+  opacity: 0.85;
+}
+
+/* ---- Player pills ---- */
+.qmoji-pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.qmoji-pill {
+  background: var(--qmoji-teal);
+  color: var(--qmoji-ink);
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.qmoji-pill.host::after { content: '👑'; font-size: 0.7rem; }
+
+/* ---- Word reveal boxes ---- */
+.qmoji-word-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.qmoji-word-box {
+  background: white;
+  color: var(--qmoji-ink);
+  border-radius: 10px;
+  padding: 12px;
+  font-weight: 700;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.qmoji-word-box.match { background: var(--qmoji-green); color: white; }
+.qmoji-answer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 280px;
+  margin: 10px auto;
+}
+
+.qmoji-answer-card {
+  background: #ffffff;
+  color: #333;
+  padding: 20px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+}
+
+.qmoji-answer-card.correct {
+  background: #75d979; /* Bright green match color */
+  color: #000;
+  box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
+}
+
+.qmoji-answer-card.empty {
+  background: #e0e0e0;
+  color: #999;
+}
+
+/* ---- Leaderboard rows ---- */
+.qmoji-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--qmoji-teal);
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--qmoji-ink);
+}
+.qmoji-score-row.leader { background: var(--qmoji-teal-deep); }
