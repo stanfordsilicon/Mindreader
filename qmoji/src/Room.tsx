@@ -46,9 +46,10 @@ export default function Room() {
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // New states for countdown and phase
+  // New states for countdown, phase, and player reveal
   const [phase, setPhase] = useState<'waiting' | 'countdown' | 'playing' | 'results'>('waiting');
   const [countdownValue, setCountdownValue] = useState<number | null>(null);
+  const [revealedPlayerId, setRevealedPlayerId] = useState<string | null>(null);
 
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
@@ -204,9 +205,7 @@ export default function Room() {
 
   // ---- Auto‑start next round after 5 seconds (host only) ----
   useEffect(() => {
-    // Only proceed if results are shown, host is present, and room is still playing (not ended)
     if (showResults && isHost && roomState?.state === 'playing') {
-      // Clear any existing auto‑start timer
       if (autoStartTimerRef.current) clearTimeout(autoStartTimerRef.current);
       autoStartTimerRef.current = window.setTimeout(() => {
         handleStartRound();
@@ -220,6 +219,15 @@ export default function Room() {
     }
   }, [showResults, isHost, roomState?.state]);
 
+  // ---- Set initial player for result reveal ----
+  useEffect(() => {
+    if (showResults && roomState) {
+      // Auto-select the current user if they are in the room, otherwise default to first player
+      const initial = roomState.players.find(p => p.user_id === userId)?.user_id || roomState.players[0]?.user_id;
+      setRevealedPlayerId(initial || null);
+    }
+  }, [showResults, roomState, userId]);
+
   // ---- Start round (host) ----
   const handleStartRound = useCallback(async () => {
     if (!roomId) return;
@@ -232,14 +240,12 @@ export default function Room() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (data.state === 'ended') {
-          // Final round reached – update local state to 'ended' and stop auto‑start
           setRoomState((prev) => (prev ? { ...prev, state: 'ended' } : prev));
           setShowResults(false);
           return;
         }
         throw new Error(data.error || 'Failed to fetch new emoji.');
       }
-      // The round change will be picked up by the poll and trigger countdown
       await fetchState();
     } catch (err: any) {
       setError(err.message || 'Error fetching new emoji.');
@@ -317,6 +323,37 @@ export default function Room() {
   // ---- Render ----
   return (
     <div className="qmoji-card">
+      {/* Inline injected styles to make the answer-grid work immediately */}
+      <style>{`
+        .qmoji-answer-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          max-width: 280px;
+          margin: 10px auto;
+        }
+        .qmoji-answer-card {
+          background: #ffffff;
+          color: #333;
+          padding: 20px 0;
+          border-radius: 8px;
+          text-align: center;
+          font-weight: bold;
+          font-size: 1.1rem;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          transition: all 0.2s ease;
+        }
+        .qmoji-answer-card.correct {
+          background: #75d979;
+          color: #000;
+          box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.2);
+        }
+        .qmoji-answer-card.empty {
+          background: #e0e0e0;
+          color: #999;
+        }
+      `}</style>
+
       <div className="qmoji-header-row">
         <button className="qmoji-icon-btn" onClick={handleLeave} aria-label="Leave room">↩</button>
         <span className="qmoji-room-code">{roomId}</span>
@@ -336,7 +373,7 @@ export default function Room() {
         </p>
       )}
 
-      {/* ---- Round results modal (simplified leaderboard) ---- */}
+      {/* ---- Round results modal (updated with player dropdown & 2x2 grid) ---- */}
       {showResults && (
         <div
           role="dialog"
@@ -363,14 +400,59 @@ export default function Room() {
               ✕
             </button>
 
-            <h3 style={{ textAlign: 'center', marginTop: 0 }}>Round {roundResults?.round} Results</h3>
+            <h3 style={{ textAlign: 'center', marginTop: 0, marginBottom: '8px' }}>
+              Round {roundResults?.round} Results
+            </h3>
+            
+            {/* Display the emoji prominently in results */}
+            <div style={{ fontSize: '3.5rem', textAlign: 'center', marginBottom: '16px', lineHeight: 1 }}>
+              {roundResults?.emoji}
+            </div>
 
             {isLoadingResults ? (
-              <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>Loading results...</p>
+              <p style={{ textAlign: 'center' }}>Loading results...</p>
             ) : roundResults ? (
               <>
+                {/* --- NEW: ANSWER REVEAL GRID with Player Selector --- */}
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Let's see what</span>
+                    <select
+                      value={revealedPlayerId || ''}
+                      onChange={(e) => setRevealedPlayerId(e.target.value)}
+                      style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #999', fontSize: '0.85rem', background: 'white', color: '#333' }}
+                    >
+                      {roomState?.players.map(p => (
+                        <option key={p.user_id} value={p.user_id}>{getPlayerName(p.user_id)}</option>
+                      ))}
+                    </select>
+                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>answered...</span>
+                  </div>
+                  
+                  <div className="qmoji-answer-grid">
+                    {Object.entries(roundResults.results?.[revealedPlayerId || ''] || {})
+                      .slice(0, 4) 
+                      .map(([keyword, score]) => (
+                        <div
+                          key={keyword}
+                          className={`qmoji-answer-card ${score > 0 ? 'correct' : ''}`}
+                        >
+                          {keyword}
+                        </div>
+                      ))}
+                      
+                    {/* Pad with empty placeholders to keep the 2x2 grid */}
+                    {Array.from({ length: 4 - (Object.keys(roundResults.results?.[revealedPlayerId || ''] || {}).length || 0) }).map((_, i) => (
+                      <div key={`empty-${i}`} className="qmoji-answer-card empty">
+                        ?
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* --- END NEW SECTION --- */}
+
                 {/* Round leaderboard */}
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ borderTop: '1px solid rgba(0,0,0,0.1)', paddingTop: '16px' }}>
                   {Object.entries(roundResults.round_scores)
                     .sort(([, a], [, b]) => b - a)
                     .map(([id, score], index) => (
@@ -381,21 +463,19 @@ export default function Room() {
                     ))}
                 </div>
 
-                {/* Optional: show total scores compactly */}
+                {/* Totals & Auto-start / End Game logic... */}
                 <p style={{ fontSize: '0.7rem', opacity: 0.7, textAlign: 'center', margin: '4px 0' }}>
                   Totals: {Object.entries(roundResults.total_scores)
                     .map(([id, total]) => `${getPlayerName(id)}: ${total}`)
                     .join(' | ')}
                 </p>
 
-                {/* Auto‑start countdown (host only) */}
                 {isHost && roomState?.state === 'playing' && (
                   <p style={{ textAlign: 'center', fontSize: '0.7rem', marginTop: 12 }}>
                     Next round in {Math.ceil(AUTO_START_DELAY_MS / 1000)}s...
                   </p>
                 )}
 
-                {/* If room already ended, show final message */}
                 {roomState?.state === 'ended' && (
                   <p style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--qmoji-ink)' }}>
                     🏆 Game Over – Final Scores
@@ -406,7 +486,6 @@ export default function Room() {
               <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>No results yet.</p>
             )}
 
-            {/* Fallback “Next round” button (should rarely be needed) */}
             {isHost && roomState?.state === 'playing' && (
               <button
                 type="button"
