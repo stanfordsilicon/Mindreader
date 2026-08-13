@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
 const POLL_INTERVAL_MS = 2000;
 const ROUND_SECONDS = 30;
+const COUNTDOWN_START = 3;
+const AUTO_START_DELAY_MS = 5000; // 5 seconds
 
 type Player = { user_id: string; name: string };
 type RoomState = {
@@ -44,8 +46,13 @@ export default function Room() {
   const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // New states for countdown and phase
+  const [phase, setPhase] = useState<'waiting' | 'countdown' | 'playing' | 'results'>('waiting');
+  const [countdownValue, setCountdownValue] = useState<number | null>(null);
+
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
+  const autoStartTimerRef = useRef<number | null>(null);
 
   const isHost = Boolean(roomState?.players[0]?.user_id && roomState.players[0].user_id === userId);
 
@@ -58,6 +65,7 @@ export default function Room() {
     [roomState, userId],
   );
 
+  // ---- Navigation & joining ----
   useEffect(() => {
     if (!roomId || !userId || !username) {
       navigate('/multiplayer');
@@ -87,6 +95,7 @@ export default function Room() {
     join();
   }, [roomId, userId, username, hasJoined]);
 
+  // ---- Polling ----
   const fetchState = useCallback(async () => {
     if (!roomId) return;
     try {
@@ -98,13 +107,21 @@ export default function Room() {
       if (!res.ok) throw new Error('Error fetching room state.');
       const data: RoomState = await res.json();
 
+      // Detect new round
       if (data.round > lastRoundRef.current) {
         lastRoundRef.current = data.round;
+        // Reset UI for new round
         setKeywords(['', '', '', '']);
-        setTimeLeft(ROUND_SECONDS);
         setSubmitSuccess(false);
         setShowResults(false);
         setRoundResults(null);
+        // If the round is playing, start countdown
+        if (data.state === 'playing') {
+          setPhase('countdown');
+          setCountdownValue(COUNTDOWN_START);
+        } else {
+          setPhase('waiting');
+        }
       }
 
       setRoomState(data);
@@ -122,6 +139,49 @@ export default function Room() {
     };
   }, [hasJoined, fetchState]);
 
+  // ---- Countdown timer ----
+  useEffect(() => {
+    if (phase !== 'countdown' || countdownValue === null) return;
+    if (countdownValue > 0) {
+      const timer = setTimeout(() => {
+        setCountdownValue((prev) => (prev !== null ? prev - 1 : null));
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Countdown finished -> start playing
+      setPhase('playing');
+      setTimeLeft(ROUND_SECONDS);
+    }
+  }, [phase, countdownValue]);
+
+  // ---- Round timer ----
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    if (timeLeft > 0) {
+      const timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Time's up -> fetch results
+      if (!roundResults || roundResults.round !== roomState?.round) {
+        fetchRoundResults();
+      }
+    }
+  }, [phase, timeLeft, roomState?.round, roundResults]);
+
+  // ---- Auto‑fetch results when all players have submitted ----
+  useEffect(() => {
+    if (
+      phase === 'playing' &&
+      roomState &&
+      roomState.submitted_count === roomState.total_players &&
+      roomState.total_players > 0 &&
+      (!roundResults || roundResults.round !== roomState.round)
+    ) {
+      fetchRoundResults();
+    }
+  }, [phase, roomState, roundResults]);
+
+  // ---- Fetch results ----
   const fetchRoundResults = useCallback(async () => {
     if (!roomId) return;
     setIsLoadingResults(true);
@@ -134,6 +194,7 @@ export default function Room() {
       const data: RoundResults = await res.json();
       setRoundResults(data);
       setShowResults(true);
+      setPhase('results');
     } catch (err: any) {
       setError(err.message || 'Failed to load round results.');
     } finally {
@@ -141,6 +202,25 @@ export default function Room() {
     }
   }, [roomId]);
 
+  // ---- Auto‑start next round after 5 seconds (host only) ----
+  useEffect(() => {
+    // Only proceed if results are shown, host is present, and room is still playing (not ended)
+    if (showResults && isHost && roomState?.state === 'playing') {
+      // Clear any existing auto‑start timer
+      if (autoStartTimerRef.current) clearTimeout(autoStartTimerRef.current);
+      autoStartTimerRef.current = window.setTimeout(() => {
+        handleStartRound();
+      }, AUTO_START_DELAY_MS);
+      return () => {
+        if (autoStartTimerRef.current) {
+          clearTimeout(autoStartTimerRef.current);
+          autoStartTimerRef.current = null;
+        }
+      };
+    }
+  }, [showResults, isHost, roomState?.state]);
+
+  // ---- Start round (host) ----
   const handleStartRound = useCallback(async () => {
     if (!roomId) return;
     setError('');
@@ -149,8 +229,17 @@ export default function Room() {
       const res = await fetch(`${API_BASE_URL}/${roomId}/start_round`, {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('Failed to fetch new emoji.');
-      setShowResults(false);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.state === 'ended') {
+          // Final round reached – update local state to 'ended' and stop auto‑start
+          setRoomState((prev) => (prev ? { ...prev, state: 'ended' } : prev));
+          setShowResults(false);
+          return;
+        }
+        throw new Error(data.error || 'Failed to fetch new emoji.');
+      }
+      // The round change will be picked up by the poll and trigger countdown
       await fetchState();
     } catch (err: any) {
       setError(err.message || 'Error fetching new emoji.');
@@ -159,19 +248,7 @@ export default function Room() {
     }
   }, [roomId, fetchState]);
 
-  useEffect(() => {
-    if (roomState?.state !== 'playing') return;
-
-    if (timeLeft > 0) {
-      const timer = window.setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
-      return () => window.clearTimeout(timer);
-    }
-
-    if (!roundResults || roundResults.round !== roomState.round) {
-      fetchRoundResults();
-    }
-  }, [roomState?.state, roomState?.round, timeLeft, isHost, handleStartRound, fetchRoundResults, roundResults]);
-
+  // ---- Keyword submission ----
   const handleKeywordChange = (index: number, value: string) => {
     setKeywords((prev) => {
       const next = [...prev];
@@ -212,24 +289,22 @@ export default function Room() {
     }
   };
 
+  // ---- Leave room ----
   const handleLeave = async () => {
-  if (roomId && userId) {
-    try {
-      // 1. Tell backend to remove player from room state
-      await fetch(`${API_BASE_URL}/${roomId}/leave`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }),
-      });
-    } catch (err) {
-      console.error('Failed to notify backend on leave:', err);
+    if (roomId && userId) {
+      try {
+        await fetch(`${API_BASE_URL}/${roomId}/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId }),
+        });
+      } catch (err) {
+        console.error('Failed to notify backend on leave:', err);
+      }
     }
-  }
-
-  // 2. Clear local storage and navigate back
-  localStorage.removeItem('qmoji_current_room');
-  navigate('/multiplayer');
-};
+    localStorage.removeItem('qmoji_current_room');
+    navigate('/multiplayer');
+  };
 
   const alreadySubmitted = roomState?.submitted_user_ids.includes(userId ?? '') ?? false;
 
@@ -239,6 +314,7 @@ export default function Room() {
         .sort((a, b) => b.score - a.score)
     : [];
 
+  // ---- Render ----
   return (
     <div className="qmoji-card">
       <div className="qmoji-header-row">
@@ -260,7 +336,7 @@ export default function Room() {
         </p>
       )}
 
-      {/* ---- Round results modal ---- */}
+      {/* ---- Round results modal (simplified leaderboard) ---- */}
       {showResults && (
         <div
           role="dialog"
@@ -287,53 +363,51 @@ export default function Room() {
               ✕
             </button>
 
-            <h3>Let's see what {getPlayerName(roomState?.players?.[0]?.user_id ?? '')} answered...</h3>
+            <h3 style={{ textAlign: 'center', marginTop: 0 }}>Round {roundResults?.round} Results</h3>
 
             {isLoadingResults ? (
               <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>Loading results...</p>
             ) : roundResults ? (
               <>
-                {userId && (
-                  <p style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1rem', color: '#1e4620', margin: '0 0 14px' }}>
-                    +{roundResults.round_scores?.[userId] ?? 0} points
-                    {roundResults.total_scores?.[userId] !== undefined && (
-                      <span style={{ fontWeight: 500, display: 'block', fontSize: '0.7rem', opacity: 0.75 }}>
-                        total: {roundResults.total_scores[userId]}
-                      </span>
-                    )}
+                {/* Round leaderboard */}
+                <div style={{ marginBottom: 16 }}>
+                  {Object.entries(roundResults.round_scores)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([id, score], index) => (
+                      <div key={id} className={`qmoji-score-row ${index === 0 ? 'leader' : ''}`}>
+                        <span>{index === 0 ? '👑 ' : ''}{getPlayerName(id)}</span>
+                        <span>+{score}</span>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Optional: show total scores compactly */}
+                <p style={{ fontSize: '0.7rem', opacity: 0.7, textAlign: 'center', margin: '4px 0' }}>
+                  Totals: {Object.entries(roundResults.total_scores)
+                    .map(([id, total]) => `${getPlayerName(id)}: ${total}`)
+                    .join(' | ')}
+                </p>
+
+                {/* Auto‑start countdown (host only) */}
+                {isHost && roomState?.state === 'playing' && (
+                  <p style={{ textAlign: 'center', fontSize: '0.7rem', marginTop: 12 }}>
+                    Next round in {Math.ceil(AUTO_START_DELAY_MS / 1000)}s...
                   </p>
                 )}
 
-                {Object.entries(roundResults.results).map(([id, words]) => {
-                  const sortedWords = Object.entries(words)
-                    .filter(([, count]) => count > 0)
-                    .sort(([, a], [, b]) => b - a);
-
-                  return (
-                    <div key={id} style={{ marginBottom: '18px' }}>
-                      <strong style={{ fontSize: '0.8rem' }}>{getPlayerName(id)}</strong>
-                      {sortedWords.length === 0 ? (
-                        <p style={{ opacity: 0.7, margin: '8px 0 0', fontStyle: 'italic', fontSize: '0.75rem' }}>
-                          0 points — no matching words
-                        </p>
-                      ) : (
-                        <div className="qmoji-word-grid" style={{ marginTop: 8 }}>
-                          {sortedWords.map(([word, count]) => (
-                            <div key={word} className={`qmoji-word-box ${count > 0 ? 'match' : ''}`}>
-                              {word} <span style={{ opacity: 0.8, fontWeight: 500 }}>({count})</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {/* If room already ended, show final message */}
+                {roomState?.state === 'ended' && (
+                  <p style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--qmoji-ink)' }}>
+                    🏆 Game Over – Final Scores
+                  </p>
+                )}
               </>
             ) : (
               <p style={{ textAlign: 'center', fontSize: '0.8rem' }}>No results yet.</p>
             )}
 
-            {isHost && (
+            {/* Fallback “Next round” button (should rarely be needed) */}
+            {isHost && roomState?.state === 'playing' && (
               <button
                 type="button"
                 className="qmoji-btn qmoji-btn-green"
@@ -381,61 +455,73 @@ export default function Room() {
 
           {roomState.state === 'playing' && (
             <div>
-              <div style={{
-                fontFamily: 'var(--font-display)', fontSize: '0.75rem', textAlign: 'center',
-                marginBottom: 14, color: timeLeft <= 5 ? '#ff8a75' : timeLeft <= 15 ? 'var(--qmoji-yellow)' : 'var(--qmoji-white)',
-              }}>
-                {timeLeft > 0 ? `${timeLeft}s` : "Time's up!"}
-              </div>
-
-              <div style={{ fontSize: '4rem', textAlign: 'center', marginBottom: 16 }}>
-                {roomState.emoji}
-              </div>
-
-              <p style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.8, marginBottom: 14 }}>
-                {roomState.submitted_count} / {roomState.total_players} players have submitted
-              </p>
-
-              {!alreadySubmitted ? (
-                <form
-                  onSubmit={handleSubmit}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLFormElement>) => {
-                    if (e.key === 'Enter') e.preventDefault();
-                  }}
-                >
-                  <div className="qmoji-word-grid" style={{ marginBottom: 14 }}>
-                    {keywords.map((kw, i) => (
-                      <input
-                        key={i}
-                        type="text"
-                        className="qmoji-input"
-                        value={kw}
-                        placeholder={`Keyword ${i + 1}`}
-                        onChange={(e) => handleKeywordChange(i, e.target.value)}
-                        disabled={isSubmitting || timeLeft === 0}
-                      />
-                    ))}
-                  </div>
-                  <button type="submit" className="qmoji-btn qmoji-btn-green" disabled={isSubmitting || timeLeft === 0}>
-                    {isSubmitting ? 'Saving...' : 'Enter word'}
-                  </button>
-                </form>
-              ) : (
-                <p style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '0.75rem', opacity: 0.8 }}>
-                  Waiting for other players or timer expiration...
-                </p>
+              {/* Countdown display */}
+              {phase === 'countdown' && countdownValue !== null && countdownValue > 0 && (
+                <div style={{ fontSize: '4rem', textAlign: 'center', marginBottom: 16, fontFamily: 'var(--font-display)' }}>
+                  {countdownValue}
+                </div>
               )}
 
-              {(roomState.submitted_count === roomState.total_players || isHost) && (
-                <button
-                  type="button"
-                  className="qmoji-btn"
-                  onClick={fetchRoundResults}
-                  disabled={isLoadingResults}
-                  style={{ marginTop: 16, background: 'var(--qmoji-teal-deep)', color: 'var(--qmoji-ink)' }}
-                >
-                  {isLoadingResults ? 'Loading...' : 'See results'}
-                </button>
+              {/* Emoji and timer only when playing */}
+              {phase === 'playing' && (
+                <>
+                  <div style={{
+                    fontFamily: 'var(--font-display)', fontSize: '0.75rem', textAlign: 'center',
+                    marginBottom: 14, color: timeLeft <= 5 ? '#ff8a75' : timeLeft <= 15 ? 'var(--qmoji-yellow)' : 'var(--qmoji-white)',
+                  }}>
+                    {timeLeft > 0 ? `${timeLeft}s` : "Time's up!"}
+                  </div>
+
+                  <div style={{ fontSize: '4rem', textAlign: 'center', marginBottom: 16 }}>
+                    {roomState.emoji}
+                  </div>
+
+                  <p style={{ textAlign: 'center', fontSize: '0.7rem', opacity: 0.8, marginBottom: 14 }}>
+                    {roomState.submitted_count} / {roomState.total_players} players have submitted
+                  </p>
+
+                  {!alreadySubmitted ? (
+                    <form
+                      onSubmit={handleSubmit}
+                      onKeyDown={(e: React.KeyboardEvent<HTMLFormElement>) => {
+                        if (e.key === 'Enter') e.preventDefault();
+                      }}
+                    >
+                      <div className="qmoji-word-grid" style={{ marginBottom: 14 }}>
+                        {keywords.map((kw, i) => (
+                          <input
+                            key={i}
+                            type="text"
+                            className="qmoji-input"
+                            value={kw}
+                            placeholder={`Keyword ${i + 1}`}
+                            onChange={(e) => handleKeywordChange(i, e.target.value)}
+                            disabled={isSubmitting || timeLeft === 0}
+                          />
+                        ))}
+                      </div>
+                      <button type="submit" className="qmoji-btn qmoji-btn-green" disabled={isSubmitting || timeLeft === 0}>
+                        {isSubmitting ? 'Saving...' : 'Enter word'}
+                      </button>
+                    </form>
+                  ) : (
+                    <p style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '0.75rem', opacity: 0.8 }}>
+                      Waiting for other players or timer expiration...
+                    </p>
+                  )}
+                </>
+              )}
+
+              {/* Always show scoreboard during playing */}
+              {phase === 'playing' && (
+                <div style={{ marginTop: 20 }}>
+                  {sortedScoreboard.map((p, index) => (
+                    <div key={p.user_id} className={`qmoji-score-row ${index === 0 ? 'leader' : ''}`}>
+                      <span>{index === 0 ? '👑 ' : ''}{p.name}{p.user_id === userId ? ' (you)' : ''}</span>
+                      <span>{p.score}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -457,18 +543,6 @@ export default function Room() {
                   </button>
                 )}
               </div>
-            </div>
-          )}
-
-          {/* Always-visible scoreboard while a round is in progress */}
-          {roomState.state === 'playing' && (
-            <div style={{ marginTop: 20 }}>
-              {sortedScoreboard.map((p, index) => (
-                <div key={p.user_id} className={`qmoji-score-row ${index === 0 ? 'leader' : ''}`}>
-                  <span>{index === 0 ? '👑 ' : ''}{p.name}{p.user_id === userId ? ' (you)' : ''}</span>
-                  <span>{p.score}</span>
-                </div>
-              ))}
             </div>
           )}
         </>
