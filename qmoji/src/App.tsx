@@ -78,20 +78,50 @@ function useArcadeAutoJoin() {
   return backParams;
 }
 
+// Mirrors qmoji/app.js's own launchGame() transition (fade in "LOADING…"
+// with a bar-fill, then navigate after a beat) so leaving a game feels
+// like the same continuous arcade as entering one, instead of an instant
+// jump cut -- see App.css's .arcade-loading-screen for the shared styling.
+function useLaunchpadTransition() {
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [fillWidth, setFillWidth] = useState('0%');
+
+  const navigateToLaunchpad = (href: string) => {
+    setIsLeaving(true);
+    requestAnimationFrame(() => setFillWidth('100%'));
+    setTimeout(() => {
+      window.location.href = href;
+    }, 650);
+  };
+
+  const overlay = (
+    <div className={`arcade-loading-screen${isLeaving ? ' is-visible' : ''}`} aria-hidden={!isLeaving}>
+      <p className="arcade-loading-text">
+        LOADING<span className="arcade-loading-dots">...</span>
+      </p>
+      <div className="arcade-loading-bar">
+        <div className="arcade-loading-bar-fill" style={{ width: fillWidth }} />
+      </div>
+    </div>
+  );
+
+  return { navigateToLaunchpad, overlay };
+}
+
 export default function App() {
   const arcadeBackParams = useArcadeAutoJoin();
+  const { navigateToLaunchpad, overlay } = useLaunchpadTransition();
 
   return (
     <>
+      {overlay}
       <button
         type="button"
         className="back-to-launchpad"
         title="Return to launch pad"
         onClick={() => {
-          window.location.href = backToHomescreenUrl(
-            arcadeBackParams.roomCode,
-            arcadeBackParams.lang,
-            arcadeBackParams.playerId
+          navigateToLaunchpad(
+            backToHomescreenUrl(arcadeBackParams.roomCode, arcadeBackParams.lang, arcadeBackParams.playerId)
           );
         }}
       >
