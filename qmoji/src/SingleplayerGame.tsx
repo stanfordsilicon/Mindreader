@@ -46,7 +46,7 @@ function SingleplayerGame() {
       setRoundCount(0);
     }
 
-    if (!canStartNextRound(roundCount, maxRounds)) {
+    if (!canStartNextRound(roundCount, maxRounds, submitSuccess)) {
       setGameComplete(true);
       setShowEmoji(false);
       setCurrentEmoji('');
