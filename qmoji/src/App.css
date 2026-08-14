@@ -196,21 +196,27 @@
   }
 }
 
+/* Matches the retro arcade button used by every other game (Munchers,
+   Scramble, Auction, oddoneout-rebuild) exactly -- same hex values as
+   qmoji/style.css's --panel/--panel-line/--ink-soft/--cyan tokens,
+   hardcoded here since this app doesn't otherwise use that theme system. */
 .back-to-launchpad {
   position: fixed;
   top: 12px;
   left: 12px;
   z-index: 500;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  background: rgba(255, 255, 255, 0.9);
-  color: #222;
-  font-size: 12px;
-  font-weight: 700;
+  padding: 9px 13px;
+  border-radius: 4px;
+  border: 2px solid #4a2a7a;
+  background: #1c0f33;
+  color: #b6a4d9;
+  font-family: "Press Start 2P", "Noto Sans", sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.03em;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
-.back-to-launchpad:hover { background: #fff; }
+.back-to-launchpad:hover { border-color: #33fff0; color: #33fff0; }
 
 /* Return-to-launchpad transition, matching qmoji/app.js's own outbound
    launchGame() screen (fade in "LOADING…" with a bar-fill, then navigate).
