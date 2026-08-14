@@ -419,10 +419,6 @@ export default function Room() {
         }
       `}</style>
 
-      <div className="qmoji-header-row">
-        <button className="qmoji-icon-btn" onClick={handleLeave} aria-label="Leave room">↩</button>
-        <span className="qmoji-room-code">{roomId}</span>
-      </div>
       <h1 className="qmoji-title">Mindreader</h1>
       <p className="qmoji-subtitle">Describe the emoji with up to four keywords in 30 seconds!</p>
 
