@@ -273,7 +273,7 @@ export default function Room() {
           }
           goToNextPlayer();
         }
-      }, 500);
+      }, 1500);
     }
 
     return () => {
@@ -543,7 +543,7 @@ export default function Room() {
 
                 {/* Totals & Auto-start / End Game logic... */}
                 <p style={{ fontSize: '0.7rem', opacity: 0.7, textAlign: 'center', margin: '4px 0' }}>
-                  Totals: {Object.entries(roundResults.total_scores)
+                  🏆: {Object.entries(roundResults.total_scores)
                     .map(([id, total]) => `${getPlayerName(id)}: ${total}`)
                     .join(' | ')}
                 </p>
