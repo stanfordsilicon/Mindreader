@@ -256,7 +256,7 @@ export default function Room() {
     const goToNextPlayer = () => {
       playerAdvanceTimerRef.current = window.setTimeout(() => {
         setRevealIndex((i) => i + 1);
-      }, 1200);
+      }, 3600);
     };
 
     if (totalKeywords === 0) {
