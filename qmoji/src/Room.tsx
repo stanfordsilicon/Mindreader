@@ -5,7 +5,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage
 const POLL_INTERVAL_MS = 2000;
 const ROUND_SECONDS = 30;
 const COUNTDOWN_START = 3;
-const AUTO_START_DELAY_MS = 5000; // 5 seconds
+const AUTO_START_DELAY_MS = 24000; // 24 seconds
 
 type Player = { user_id: string; name: string };
 type RoomState = {
@@ -50,6 +50,16 @@ export default function Room() {
   const [phase, setPhase] = useState<'waiting' | 'countdown' | 'playing' | 'results'>('waiting');
   const [countdownValue, setCountdownValue] = useState<number | null>(null);
   const [revealedPlayerId, setRevealedPlayerId] = useState<string | null>(null);
+
+  // Sequential reveal state: how many keyword cards are shown for the
+  // current player, which player index we're on, and a stable snapshot
+  // of the player list for this round (so polling doesn't restart it).
+  const [revealedCount, setRevealedCount] = useState(0);
+  const [revealIndex, setRevealIndex] = useState(0);
+  const [revealPlayers, setRevealPlayers] = useState<Player[]>([]);
+  const manualSelectRef = useRef(false);
+  const revealTimerRef = useRef<number | null>(null);
+  const playerAdvanceTimerRef = useRef<number | null>(null);
 
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
@@ -203,7 +213,7 @@ export default function Room() {
     }
   }, [roomId]);
 
-  // ---- Auto‑start next round after 5 seconds (host only) ----
+  // ---- Auto‑start next round after AUTO_START_DELAY_MS (host only) ----
   useEffect(() => {
     if (showResults && isHost && roomState?.state === 'playing') {
       if (autoStartTimerRef.current) clearTimeout(autoStartTimerRef.current);
@@ -219,14 +229,64 @@ export default function Room() {
     }
   }, [showResults, isHost, roomState?.state]);
 
-  // ---- Set initial player for result reveal ----
+  // ---- Reset the sequence whenever a new round's results open ----
   useEffect(() => {
     if (showResults && roomState) {
-      // Auto-select the current user if they are in the room, otherwise default to first player
-      const initial = roomState.players.find(p => p.user_id === userId)?.user_id || roomState.players[0]?.user_id;
-      setRevealedPlayerId(initial || null);
+      manualSelectRef.current = false;
+      setRevealPlayers(roomState.players); // snapshot so polling doesn't restart the sequence
+      setRevealIndex(0);
+      setRevealedCount(0);
+      setRevealedPlayerId(roomState.players[0]?.user_id || null);
     }
-  }, [showResults, roomState, userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showResults, roundResults?.round]);
+
+  // ---- Sequential reveal: cards within a player, then advance to next player ----
+  useEffect(() => {
+    if (!showResults || !roundResults || manualSelectRef.current) return;
+    if (revealIndex >= revealPlayers.length) return; // sequence finished
+
+    const currentPlayer = revealPlayers[revealIndex];
+    setRevealedPlayerId(currentPlayer.user_id);
+    setRevealedCount(0);
+
+    const answers = roundResults.results?.[currentPlayer.user_id] || {};
+    const totalKeywords = Math.min(4, Object.keys(answers).length);
+
+    const goToNextPlayer = () => {
+      playerAdvanceTimerRef.current = window.setTimeout(() => {
+        setRevealIndex((i) => i + 1);
+      }, 1200);
+    };
+
+    if (totalKeywords === 0) {
+      goToNextPlayer();
+    } else {
+      let count = 0;
+      revealTimerRef.current = window.setInterval(() => {
+        count += 1;
+        setRevealedCount(count);
+        if (count >= totalKeywords) {
+          if (revealTimerRef.current) {
+            clearInterval(revealTimerRef.current);
+            revealTimerRef.current = null;
+          }
+          goToNextPlayer();
+        }
+      }, 500);
+    }
+
+    return () => {
+      if (revealTimerRef.current) {
+        clearInterval(revealTimerRef.current);
+        revealTimerRef.current = null;
+      }
+      if (playerAdvanceTimerRef.current) {
+        clearTimeout(playerAdvanceTimerRef.current);
+        playerAdvanceTimerRef.current = null;
+      }
+    };
+  }, [revealIndex, showResults, roundResults, revealPlayers]);
 
   // ---- Start round (host) ----
   const handleStartRound = useCallback(async () => {
@@ -342,6 +402,7 @@ export default function Room() {
           font-size: 1.1rem;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           transition: all 0.2s ease;
+          animation: qmoji-pop 0.25s ease-out;
         }
         .qmoji-answer-card.correct {
           background: #75d979;
@@ -351,6 +412,10 @@ export default function Room() {
         .qmoji-answer-card.empty {
           background: #e0e0e0;
           color: #999;
+        }
+        @keyframes qmoji-pop {
+          from { transform: scale(0.7); opacity: 0; }
+          to   { transform: scale(1); opacity: 1; }
         }
       `}</style>
 
@@ -413,13 +478,26 @@ export default function Room() {
               <p style={{ textAlign: 'center' }}>Loading results...</p>
             ) : roundResults ? (
               <>
-                {/* --- NEW: ANSWER REVEAL GRID with Player Selector --- */}
+                {/* --- ANSWER REVEAL GRID with Player Selector (auto-sequenced, manually overridable) --- */}
                 <div style={{ marginBottom: '24px' }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Let's see what</span>
                     <select
                       value={revealedPlayerId || ''}
-                      onChange={(e) => setRevealedPlayerId(e.target.value)}
+                      onChange={(e) => {
+                        // Manual selection stops the auto-sequence and reveals everything for that player.
+                        manualSelectRef.current = true;
+                        if (revealTimerRef.current) {
+                          clearInterval(revealTimerRef.current);
+                          revealTimerRef.current = null;
+                        }
+                        if (playerAdvanceTimerRef.current) {
+                          clearTimeout(playerAdvanceTimerRef.current);
+                          playerAdvanceTimerRef.current = null;
+                        }
+                        setRevealedPlayerId(e.target.value);
+                        setRevealedCount(4);
+                      }}
                       style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #999', fontSize: '0.85rem', background: 'white', color: '#333' }}
                     >
                       {roomState?.players.map(p => (
@@ -431,7 +509,7 @@ export default function Room() {
                   
                   <div className="qmoji-answer-grid">
                     {Object.entries(roundResults.results?.[revealedPlayerId || ''] || {})
-                      .slice(0, 4) 
+                      .slice(0, revealedCount)
                       .map(([keyword, score]) => (
                         <div
                           key={keyword}
@@ -442,14 +520,14 @@ export default function Room() {
                       ))}
                       
                     {/* Pad with empty placeholders to keep the 2x2 grid */}
-                    {Array.from({ length: 4 - (Object.keys(roundResults.results?.[revealedPlayerId || ''] || {}).length || 0) }).map((_, i) => (
+                    {Array.from({ length: Math.max(0, 4 - revealedCount) }).map((_, i) => (
                       <div key={`empty-${i}`} className="qmoji-answer-card empty">
                         ?
                       </div>
                     ))}
                   </div>
                 </div>
-                {/* --- END NEW SECTION --- */}
+                {/* --- END REVEAL SECTION --- */}
 
                 {/* Round leaderboard */}
                 <div style={{ borderTop: '1px solid rgba(0,0,0,0.1)', paddingTop: '16px' }}>
