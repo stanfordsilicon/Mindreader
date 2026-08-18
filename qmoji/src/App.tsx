@@ -6,6 +6,7 @@ import Room from './Room';
 import { initArcade, backToHomescreenUrl } from './arcade';
 import './App.css';
 
+// Where the game's backend lives - falls back to localhost for local dev
 const BACKEND_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '');
 
 // QMoji Arcade: party continuity from the homescreen. Enhancement only —
@@ -14,12 +15,15 @@ const BACKEND_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').re
 function useArcadeAutoJoin() {
   const navigate = useNavigate();
   const location = useLocation();
+  // Params needed to build the "return to launchpad" link later, filled in once arcade init resolves
   const [backParams, setBackParams] = useState<{ roomCode?: string; lang?: string; playerId?: string | null }>({});
 
   useEffect(() => {
+    // Guards against setting state after the component has unmounted (e.g. fast navigation away)
     let cancelled = false;
 
     initArcade().then(async (arcade) => {
+      // Bail out if we unmounted mid-request, or if there's no arcade context at all
       if (cancelled || !arcade) return;
       setBackParams({ roomCode: arcade.roomCode, lang: arcade.lang, playerId: arcade.playerId });
 
@@ -27,16 +31,20 @@ function useArcadeAutoJoin() {
       // already mid-flow on /multiplayer or /room/:id.
       if (location.pathname !== '/') return;
 
+      // Confirm this player is actually part of the arcade room (not just a random visitor)
       const me = arcade.room.players.find((p) => p.playerId === arcade.playerId);
       if (!me) return; // raw game link, not routed through the homescreen — leave the normal Start screen up
 
       const code = arcade.roomCode;
+
+      // Reuse this device's saved id, or create one if this is the first visit
       let userId = localStorage.getItem('qmoji_user_id');
       if (!userId) {
         userId = crypto.randomUUID();
         localStorage.setItem('qmoji_user_id', userId);
       }
 
+      // Attempts to join the room under this arcade's room code
       const doJoin = () =>
         fetch(`${BACKEND_URL}/${code}/join`, {
           method: 'POST',
@@ -56,10 +64,13 @@ function useArcadeAutoJoin() {
             body: JSON.stringify({ language: arcade.lang || 'en', single_player_only: false, room_id: code }),
           });
           if (!createRes.ok) return; // arcade layer is an enhancement — leave the standalone Start screen up
+          // Room now exists, retry the join
           joinRes = await doJoin();
         }
+        // Give up quietly if the join still failed after the retry
         if (!joinRes.ok) return;
 
+        // Success - save session locally and drop the player straight into the room
         localStorage.setItem('qmoji_username', me.name);
         localStorage.setItem('qmoji_current_room', code);
         navigate(`/room/${code}`);
@@ -69,6 +80,7 @@ function useArcadeAutoJoin() {
       }
     });
 
+    // Cleanup function - runs when the component unmounts
     return () => {
       cancelled = true;
     };
@@ -83,17 +95,23 @@ function useArcadeAutoJoin() {
 // like the same continuous arcade as entering one, instead of an instant
 // jump cut -- see App.css's .arcade-loading-screen for the shared styling.
 function useLaunchpadTransition() {
+  // Whether the loading overlay should currently be shown
   const [isLeaving, setIsLeaving] = useState(false);
+  // Current width of the progress bar fill, animated from 0% to 100%
   const [fillWidth, setFillWidth] = useState('0%');
 
+  // Kicks off the fade-out/loading-bar animation, then hard-navigates once it's done
   const navigateToLaunchpad = (href: string) => {
     setIsLeaving(true);
+    // Wait a frame before animating the fill so the transition actually renders instead of jumping instantly
     requestAnimationFrame(() => setFillWidth('100%'));
+    // Give the bar-fill animation time to play before leaving the page
     setTimeout(() => {
       window.location.href = href;
     }, 650);
   };
 
+  // The loading overlay itself - only visible while isLeaving is true
   const overlay = (
     <div className={`arcade-loading-screen${isLeaving ? ' is-visible' : ''}`} aria-hidden={!isLeaving}>
       <p className="arcade-loading-text">
@@ -109,12 +127,17 @@ function useLaunchpadTransition() {
 }
 
 export default function App() {
+  // Handles silently joining an arcade room on load, if applicable
   const arcadeBackParams = useArcadeAutoJoin();
+  // Handles the loading-screen transition when leaving back to the launchpad
   const { navigateToLaunchpad, overlay } = useLaunchpadTransition();
 
   return (
     <>
+      {/* Loading overlay, only visible mid-transition */}
       {overlay}
+
+      {/* Persistent button to exit back to the arcade launchpad, present on every route */}
       <button
         type="button"
         className="back-to-launchpad"
@@ -127,6 +150,8 @@ export default function App() {
       >
         ← RETURN TO LAUNCH PAD
       </button>
+
+      {/* Main app routes: single-player start screen, multiplayer lobby, and the room itself */}
       <Routes>
         <Route path="/" element={<SingleplayerGame />} />
         <Route path="/multiplayer" element={<Multiplayerlobby />} />
