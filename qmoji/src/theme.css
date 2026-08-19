@@ -119,8 +119,8 @@ body {
 
 /* ---- Mode select cards (Singleplayer / Multiplayer) ---- */
 .qmoji-mode-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  justify-content: center;
   gap: 12px;
   margin: 18px 0;
 }
@@ -133,6 +133,8 @@ body {
   cursor: pointer;
   color: var(--qmoji-ink);
   font-family: var(--font-body);
+  width: 100%;
+  max-width: 220px; /* keeps it from stretching full width when alone */
 }
 .qmoji-mode-card.multi { background: var(--qmoji-yellow); }
 .qmoji-mode-card h4 {
