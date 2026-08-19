@@ -28,7 +28,7 @@ function useArcadeAutoJoin() {
       setBackParams({ roomCode: arcade.roomCode, lang: arcade.lang, playerId: arcade.playerId });
 
       // Only auto-route a fresh landing on "/" — don't hijack someone
-      // already mid-flow on /multiplayer or /room/:id.
+      // already mid-flow on /lmultiplayer or /room/:id.
       if (location.pathname !== '/') return;
 
       // Confirm this player is actually part of the arcade room (not just a random visitor)
