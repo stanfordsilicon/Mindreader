@@ -9,7 +9,7 @@ export const Multiplayerlobby: React.FC = () => {
 
   // Fall back to the deployed backend if no env var is set (e.g. local dev without a .env)
   // The trailing slash is stripped so we don't end up with double slashes when building URLs below
-  const API_BASE_URL = (import.meta.env.VITE_API_URL ?? 'https://exquisite-courage-production.up.railway.app/').replace(/\/$/, '');
+  const API_BASE_URL = (import.meta.env.VITE_API_URL ?? ' https://qmoji-webapp.onrender.com').replace(/\/$/, '');
 
   // Language gets passed in via route state from the previous screen (language select)
   // Defaults to English if the user landed here directly without going through that screen

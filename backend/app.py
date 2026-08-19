@@ -17,6 +17,7 @@ app = flask.Flask(__name__)
 CORS(app, origins=[
     "https://qmoji-webapp.vercel.app",
     r"https://qmoji-webapp-.*-silicons-projects-9fd9ab07\.vercel\.app",
+    "https://mindreader-webapp.vercel.app",
     "http://localhost:5173",
 ])
 
