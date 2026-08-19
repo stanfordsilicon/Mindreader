@@ -622,7 +622,7 @@ export default function Room() {
       <h1 className="qmoji-title">Mindreader</h1>
 
       <p className="qmoji-subtitle">
-        Describe the emoji with up to four keywords in 30 seconds!
+        Describe the emoji with up to four keywords!
       </p>
 
       {error && (
