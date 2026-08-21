@@ -22,7 +22,6 @@ export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
 
   const sorted = [...players].sort((a, b) => b.score - a.score);
   const top3 = sorted.slice(0, 3);
-  const rest = sorted.slice(3);
 
   const rankData = [
     { rank: 2, player: top3[1], height: 140, color: '#c0c0c0', dark: '#a0a0a0' },
