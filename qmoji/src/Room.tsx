@@ -75,6 +75,11 @@ export default function Room() {
   // Snapshot players so polling doesn't restart the reveal sequence.
   const [revealPlayers, setRevealPlayers] = useState<Player[]>([]);
 
+  // ---- Next-round countdown state ----
+  const [nextRoundCountdown, setNextRoundCountdown] = useState(
+    Math.ceil(AUTO_START_DELAY_MS / 1000),
+  );
+
   // Refs hold timers/control flags without causing re-renders.
   const manualSelectRef = useRef(false);
   const revealTimerRef = useRef<number | null>(null);
@@ -319,6 +324,25 @@ export default function Room() {
         }
       };
     }
+  }, [showResults, isHost, roomState?.state]);
+
+  // ---- Next-round live countdown ----
+  useEffect(() => {
+    if (!showResults || !isHost || roomState?.state !== 'playing') return;
+
+    setNextRoundCountdown(Math.ceil(AUTO_START_DELAY_MS / 1000));
+
+    const interval = window.setInterval(() => {
+      setNextRoundCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [showResults, isHost, roomState?.state]);
 
   // ---- Reset result reveal ----
@@ -913,9 +937,7 @@ export default function Room() {
                       }}
                     >
                       Next round in{' '}
-                      {Math.ceil(
-                        AUTO_START_DELAY_MS / 1000,
-                      )}
+                      {nextRoundCountdown}
                       s...
                     </p>
                   )}
