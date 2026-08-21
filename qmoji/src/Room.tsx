@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import Podium from './podium';
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ??
@@ -919,13 +920,13 @@ export default function Room() {
                     </p>
                   )}
 
-                {roomState?.state === 'ended' && (
-                  <p
-                    style={{
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      color: 'var(--qmoji-ink)',
-                    }}
+                {roomState.state === 'ended' && (
+                  <Podium
+                    players={sortedScoreboard}
+                    onPlayAgain={handleStartRound}
+                    onLeave={handleLeave}
+                  />
+                )}
                   >
                     🏆 Game Over – Final Scores
                   </p>
