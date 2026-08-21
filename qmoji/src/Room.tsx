@@ -920,13 +920,13 @@ export default function Room() {
                     </p>
                   )}
 
-                {roomState.state === 'ended' && (
-                  <Podium
-                    players={sortedScoreboard}
-                    onPlayAgain={handleStartRound}
-                    onLeave={handleLeave}
-                  />
-                )}
+                {roomState?.state === 'ended' && (
+                  <p
+                    style={{
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                      color: 'var(--qmoji-ink)',
+                    }}
                   >
                     🏆 Game Over – Final Scores
                   </p>
@@ -1191,54 +1191,11 @@ export default function Room() {
           {/* ---- Game over ---- */}
 
           {roomState.state === 'ended' && (
-            <div className="qmoji-panel-yellow">
-              <h3>Final Scores</h3>
-
-              {sortedScoreboard.map(
-                (p, index) => (
-                  <div
-                    key={p.user_id}
-                    className={`qmoji-score-row ${
-                      index === 0 ? 'leader' : ''
-                    }`}
-                  >
-                    <span>
-                      {index === 0 ? '👑 ' : ''}
-                      {p.name}
-                      {p.user_id === userId
-                        ? ' (you)'
-                        : ''}
-                    </span>
-
-                    <span>{p.score}</span>
-                  </div>
-                ),
-              )}
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  marginTop: 14,
-                }}
-              >
-                <button
-                  className="qmoji-btn qmoji-btn-red"
-                  onClick={handleLeave}
-                >
-                  Leave
-                </button>
-
-                {isHost && (
-                  <button
-                    className="qmoji-btn qmoji-btn-green"
-                    onClick={handleStartRound}
-                  >
-                    Play again
-                  </button>
-                )}
-              </div>
-            </div>
+            <Podium
+              players={sortedScoreboard}
+              onPlayAgain={handleStartRound}
+              onLeave={handleLeave}
+            />
           )}
         </>
       )}
