@@ -67,19 +67,44 @@ export function homescreenUrl(): string {
 const ID_KEY = "qmoji.arcade.playerId";
 const NAME_KEY = "qmoji.arcade.playerName";
 
+// ---------------------------------------------------------------
+// Bridge keys: each individual game (e.g. the Mindreader Room
+// component) reads/writes its own identity under these keys via
+// plain localStorage.getItem('qmoji_user_id') calls, completely
+// unaware of the arcade layer's own ID_KEY/NAME_KEY above. If the
+// arcade hands a player a `playerId` on launch but never writes it
+// under the game's own keys, the game's join effect mints a brand
+// new identity — same display name, different user_id — which is
+// how the same person ends up as two separate roster entries.
+// Every place that resolves/saves an arcade identity below also
+// mirrors it into these keys so the two layers can never diverge.
+// ---------------------------------------------------------------
+const GAME_ID_KEY = "qmoji_user_id";
+const GAME_NAME_KEY = "qmoji_username";
+
 export function getSavedPlayerId(): string | null {
   try { return localStorage.getItem(ID_KEY); } catch { return null; }
 }
 export function savePlayerId(id: string | null | undefined): void {
   if (!id) return;
-  try { localStorage.setItem(ID_KEY, id); } catch { /* storage unavailable */ }
+  try {
+    localStorage.setItem(ID_KEY, id);
+    // Mirror into the game's own key so Room.tsx's join effect
+    // (which only ever reads GAME_ID_KEY) picks up the same identity
+    // instead of generating a second one.
+    localStorage.setItem(GAME_ID_KEY, id);
+  } catch { /* storage unavailable */ }
 }
 export function getSavedPlayerName(): string {
   try { return localStorage.getItem(NAME_KEY) || ""; } catch { return ""; }
 }
 export function savePlayerName(name: string | null | undefined): void {
   if (!name) return;
-  try { localStorage.setItem(NAME_KEY, name); } catch { /* storage unavailable */ }
+  try {
+    localStorage.setItem(NAME_KEY, name);
+    // Mirror into the game's own key for the same reason as savePlayerId.
+    localStorage.setItem(GAME_NAME_KEY, name);
+  } catch { /* storage unavailable */ }
 }
 export function ensurePlayerId(): string {
   let id = getSavedPlayerId();
@@ -170,19 +195,51 @@ export function readParams(): ArcadeParams {
 // there's no room param or the lookup fails — the caller's existing
 // standalone start screen is always the fallback, per the contract:
 // "the arcade layer is an enhancement, not a dependency."
+//
+// IMPORTANT: this must be awaited BEFORE the game's own room/lobby
+// component mounts. It resolves the canonical arcade identity for this
+// player and mirrors it into the game's own localStorage keys
+// (qmoji_user_id / qmoji_username) via savePlayerId/savePlayerName, so
+// the game's own join logic reuses that identity instead of minting a
+// second one under a different key. Skipping this call, or calling it
+// after the game has already read its own keys, reintroduces the
+// duplicate-join bug.
 export async function initArcade(): Promise<ArcadeInit | null> {
   const params = readParams();
   if (!params.room) return null;
   const room = await getRoom(params.room);
   if (!room) return null;
-  if (params.player) savePlayerId(params.player);
+
+  // Resolve one canonical id: prefer the id the arcade just handed us
+  // in the URL, fall back to whatever we already had saved locally.
+  const resolvedPlayerId = params.player || getSavedPlayerId();
+
+  // savePlayerId/savePlayerName write to BOTH the arcade's own keys and
+  // the game's keys (qmoji_user_id / qmoji_username), so this is the
+  // single point where the two identity systems get reconciled.
+  if (resolvedPlayerId) {
+    savePlayerId(resolvedPlayerId);
+  }
+
+  const matched = room.players.find((p) => p.playerId === resolvedPlayerId);
+  const resolvedName = matched?.name || getSavedPlayerName();
+  if (resolvedName) {
+    savePlayerName(resolvedName);
+  }
+
   if (params.lang) {
     // Plumbing only for now: receive/store the ISO code so it round-trips
     // correctly. On-screen translation wiring lands in a later pass.
     try { localStorage.setItem("qmoji.lang", params.lang); } catch { /* storage unavailable */ }
     document.documentElement.lang = params.lang;
   }
-  return { room, roomCode: params.room, lang: params.lang || room.language, playerId: params.player };
+
+  return {
+    room,
+    roomCode: params.room,
+    lang: params.lang || room.language,
+    playerId: resolvedPlayerId ?? null,
+  };
 }
 
 export function launchUrl(baseUrl: string, roomCode?: string, lang?: string, playerId?: string | null): string {

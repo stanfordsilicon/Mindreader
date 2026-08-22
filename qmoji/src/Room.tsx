@@ -121,6 +121,30 @@ export default function Room() {
 
     const join = async () => {
       try {
+        // Belt-and-suspenders check: if this user_id is already in the
+        // room's roster (e.g. the arcade layer already registered this
+        // identity, or this is a reload after a successful join),
+        // don't call /join again — just adopt the existing membership.
+        // This is a safety net on top of the arcade identity bridge in
+        // arcade.ts; it also protects against any other code path that
+        // could end up calling join() with a stale or duplicate id.
+        try {
+          const stateRes = await fetch(`${API_BASE_URL}/${roomId}/state`);
+
+          if (stateRes.ok) {
+            const state: RoomState = await stateRes.json();
+
+            if (state.players.some((p) => p.user_id === userId)) {
+              setRoomState(state);
+              setHasJoined(true);
+              return;
+            }
+          }
+        } catch {
+          // If the pre-check fails for any reason, fall through to the
+          // normal join call below rather than getting stuck.
+        }
+
         const res = await fetch(`${API_BASE_URL}/${roomId}/join`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
