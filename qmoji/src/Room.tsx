@@ -8,7 +8,7 @@ const API_BASE_URL = (
 ).replace(/\/$/, '');
 
 const POLL_INTERVAL_MS = 2000;
-const ROUND_SECONDS = 30;
+const ROUND_SECONDS = 20;
 const COUNTDOWN_START = 3;
 const AUTO_START_DELAY_MS = 24000; // 24 seconds
 
