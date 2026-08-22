@@ -87,6 +87,7 @@ export default function Room() {
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
   const autoStartTimerRef = useRef<number | null>(null);
+  const hasJoinedRef = useRef(false); // <-- prevents double join in Strict Mode
 
   // The first player in the list is treated as the host.
   const isHost = Boolean(
@@ -114,7 +115,9 @@ export default function Room() {
   }, [roomId, userId, username, navigate]);
 
   useEffect(() => {
-    if (!roomId || !userId || !username || hasJoined) return;
+    if (!roomId || !userId || !username || hasJoined || hasJoinedRef.current) return;
+
+    hasJoinedRef.current = true; // lock
 
     const join = async () => {
       try {
@@ -135,6 +138,7 @@ export default function Room() {
         setHasJoined(true);
       } catch (err: any) {
         setError(err.message || 'Error joining the room.');
+        hasJoinedRef.current = false; // unlock on error so they can retry
       }
     };
 
