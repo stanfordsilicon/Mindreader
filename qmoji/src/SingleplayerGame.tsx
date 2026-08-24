@@ -639,7 +639,16 @@ function SingleplayerGame() {
               </p>
             </>
           ) : (
-
+            <button
+              type="button"
+              className="reveal-button"
+              onClick={handleRevealEmoji}
+              disabled={isLoading}
+            >
+              {isLoading
+                ? 'Loading emoji...'
+                : 'Show me an emoji!'}
+            </button>
           )}
         </section>
       ) : (
