@@ -80,8 +80,7 @@ export default function Room() {
     Math.ceil(AUTO_START_DELAY_MS / 1000),
   );
 
-  // Refs hold timers/control flags without causing re-renders.
-  const manualSelectRef = useRef(false);
+  // Refs hold timers without causing re-renders.
   const revealTimerRef = useRef<number | null>(null);
   const playerAdvanceTimerRef = useRef<number | null>(null);
   const pollRef = useRef<number | null>(null);
@@ -378,8 +377,6 @@ export default function Room() {
   // Start the reveal from the first player when new results open.
   useEffect(() => {
     if (showResults && roomState) {
-      manualSelectRef.current = false;
-
       setRevealPlayers(roomState.players);
       setRevealIndex(0);
       setRevealedCount(0);
@@ -396,11 +393,7 @@ export default function Room() {
 
   // Reveal each player's keywords one at a time, then move to the next player.
   useEffect(() => {
-    if (
-      !showResults ||
-      !roundResults ||
-      manualSelectRef.current
-    ) {
+    if (!showResults || !roundResults) {
       return;
     }
 
@@ -809,49 +802,17 @@ export default function Room() {
                       Let's see what
                     </span>
 
-                    <select
-                      value={revealedPlayerId || ''}
-                      onChange={(e) => {
-                        // Manual selection stops the automatic reveal.
-                        manualSelectRef.current = true;
-
-                        if (revealTimerRef.current) {
-                          clearInterval(
-                            revealTimerRef.current,
-                          );
-                          revealTimerRef.current = null;
-                        }
-
-                        if (playerAdvanceTimerRef.current) {
-                          clearTimeout(
-                            playerAdvanceTimerRef.current,
-                          );
-                          playerAdvanceTimerRef.current = null;
-                        }
-
-                        setRevealedPlayerId(e.target.value);
-
-                        // Show all cards immediately for manually selected player.
-                        setRevealedCount(4);
-                      }}
+                    <span
                       style={{
                         padding: '4px 8px',
                         borderRadius: '4px',
-                        border: '1px solid #999',
-                        fontSize: '0.85rem',
-                        background: 'white',
-                        color: '#333',
+                        fontSize: '0.9rem',
+                        fontWeight: 'bold',
+                        color: 'var(--qmoji-ink)',
                       }}
                     >
-                      {roomState?.players.map((p) => (
-                        <option
-                          key={p.user_id}
-                          value={p.user_id}
-                        >
-                          {getPlayerName(p.user_id)}
-                        </option>
-                      ))}
-                    </select>
+                      {getPlayerName(revealedPlayerId || '')}
+                    </span>
 
                     <span
                       style={{
@@ -936,24 +897,29 @@ export default function Room() {
 
                 {/* ---- Total scores / game status ---- */}
 
-                <p
-                  style={{
-                    fontSize: '0.7rem',
-                    opacity: 0.7,
-                    textAlign: 'center',
-                    margin: '4px 0',
-                  }}
-                >
-                  🏆:{' '}
+                <div style={{ margin: '4px 0' }}>
                   {Object.entries(
                     roundResults.total_scores,
                   )
-                    .map(
-                      ([id, total]) =>
-                        `${getPlayerName(id)}: ${total}`,
+                    .sort(
+                      ([, a], [, b]) => b - a,
                     )
-                    .join(' | ')}
-                </p>
+                    .map(
+                      ([id, total], index) => (
+                        <p
+                          key={id}
+                          style={{
+                            fontSize: '0.7rem',
+                            opacity: 0.7,
+                            textAlign: 'center',
+                            margin: '2px 0',
+                          }}
+                        >
+                          {index + 1}. {getPlayerName(id)}: {total}
+                        </p>
+                      ),
+                    )}
+                </div>
 
                 {isHost &&
                   roomState?.state === 'playing' && (

@@ -148,7 +148,7 @@ export default function App() {
           );
         }}
       >
-        ← RETURN TO LAUNCH PAD
+        🚪
       </button>
 
       {/* Main app routes: single-player start screen, multiplayer lobby, and the room itself */}
