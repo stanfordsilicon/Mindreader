@@ -344,7 +344,7 @@ export const Multiplayerlobby: React.FC = () => {
           className="qmoji-input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="e.g. EmojiMaster99"
+          placeholder="enter username"
           disabled={isLoading}
         />
       </div>
