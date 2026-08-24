@@ -36,6 +36,11 @@ type RoundResults = {
   total_scores: Record<string, number>;
 };
 
+/** Defensive deduplication — keeps the first occurrence of each user_id. */
+function dedupePlayers(players: Player[]): Player[] {
+  return [...new Map(players.map((p) => [p.user_id, p])).values()];
+}
+
 export default function Room() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
@@ -96,21 +101,25 @@ export default function Room() {
     keywordsRef.current = keywords;
   }, [keywords]);
 
+  // ---- Derived, deduplicated state (defensive) ----
+  const players = roomState ? dedupePlayers(roomState.players) : [];
+  const submittedUserIds = roomState
+    ? [...new Set(roomState.submitted_user_ids)]
+    : [];
+  const totalPlayers = players.length;
+
   // The first player in the list is treated as the host.
   const isHost = Boolean(
-    roomState?.players[0]?.user_id &&
-      roomState.players[0].user_id === userId,
+    players[0]?.user_id && players[0].user_id === userId,
   );
 
   const getPlayerName = useCallback(
     (id: string) => {
       if (id === userId) return 'You';
-
-      const match = roomState?.players.find((p) => p.user_id === id);
-
+      const match = players.find((p) => p.user_id === id);
       return match?.name ?? `Player ${id.slice(0, 6)}`;
     },
-    [roomState, userId],
+    [players, userId],
   );
 
   // ---- Navigation & joining ----
@@ -129,15 +138,11 @@ export default function Room() {
     const join = async () => {
       try {
         // Belt-and-suspenders check: if this user_id is already in the
-        // room's roster (e.g. the arcade layer already registered this
-        // identity, or this is a reload after a successful join),
-        // don't call /join again — just adopt the existing membership.
+        // room's roster, don't call /join again.
         try {
           const stateRes = await fetch(`${API_BASE_URL}/${roomId}/state`);
-
           if (stateRes.ok) {
             const state: RoomState = await stateRes.json();
-
             if (state.players.some((p) => p.user_id === userId)) {
               setRoomState(state);
               setHasJoined(true);
@@ -145,8 +150,7 @@ export default function Room() {
             }
           }
         } catch {
-          // If the pre-check fails for any reason, fall through to the
-          // normal join call below rather than getting stuck.
+          // fall through to normal join
         }
 
         const res = await fetch(`${API_BASE_URL}/${roomId}/join`, {
@@ -259,6 +263,38 @@ export default function Room() {
     setTimeLeft(ROUND_SECONDS);
   }, [phase, countdownValue]);
 
+  // ---- Fetch results (declared BEFORE the timer effect that uses it) ----
+
+  const fetchRoundResults = useCallback(async () => {
+    if (!roomId) return;
+
+    setIsLoadingResults(true);
+
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/${roomId}/round_results`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+
+      if (!res.ok) {
+        throw new Error('Could not load round results.');
+      }
+
+      const data: RoundResults = await res.json();
+
+      setRoundResults(data);
+      setShowResults(true);
+      setPhase('results');
+    } catch (err: any) {
+      setError(err.message || 'Failed to load round results.');
+    } finally {
+      setIsLoadingResults(false);
+    }
+  }, [roomId]);
+
   // ---- Round timer ----
 
   // Count down the round and fetch results when time expires.
@@ -347,39 +383,7 @@ export default function Room() {
     ) {
       fetchRoundResults();
     }
-  }, [phase, roomState, roundResults]);
-
-  // ---- Fetch results ----
-
-  const fetchRoundResults = useCallback(async () => {
-    if (!roomId) return;
-
-    setIsLoadingResults(true);
-
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/${roomId}/round_results`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
-
-      if (!res.ok) {
-        throw new Error('Could not load round results.');
-      }
-
-      const data: RoundResults = await res.json();
-
-      setRoundResults(data);
-      setShowResults(true);
-      setPhase('results');
-    } catch (err: any) {
-      setError(err.message || 'Failed to load round results.');
-    } finally {
-      setIsLoadingResults(false);
-    }
-  }, [roomId]);
+  }, [phase, roomState, roundResults, fetchRoundResults]);
 
   // ---- Automatic next round ----
 
@@ -431,11 +435,11 @@ export default function Room() {
   // Start the reveal from the first player when new results open.
   useEffect(() => {
     if (showResults && roomState) {
-      setRevealPlayers(roomState.players);
+      setRevealPlayers(players);
       setRevealIndex(0);
       setRevealedCount(0);
       setRevealedPlayerId(
-        roomState.players[0]?.user_id || null,
+        players[0]?.user_id || null,
       );
     }
 
@@ -657,16 +661,14 @@ export default function Room() {
   // ---- Derived scoreboard state ----
 
   const alreadySubmitted =
-    roomState?.submitted_user_ids.includes(userId ?? '') ?? false;
+    userId ? submittedUserIds.includes(userId) : false;
 
-  const sortedScoreboard = roomState
-    ? [...roomState.players]
-        .map((p) => ({
-          ...p,
-          score: roomState.scores[p.user_id] ?? 0,
-        }))
-        .sort((a, b) => b.score - a.score)
-    : [];
+  const sortedScoreboard = players
+    .map((p) => ({
+      ...p,
+      score: roomState?.scores[p.user_id] ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score);
 
   // ---- Render ----
 
@@ -1051,7 +1053,7 @@ export default function Room() {
               <h3>Waiting for all players...</h3>
 
               <div className="qmoji-pill-row">
-                {roomState.players.map((p, index) => (
+                {players.map((p, index) => (
                   <span
                     key={p.user_id}
                     className={`qmoji-pill ${
