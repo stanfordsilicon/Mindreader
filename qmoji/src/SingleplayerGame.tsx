@@ -1,3 +1,4 @@
+//This is the singleplayergame which is like a battle royale between all possible singlegamemode players, not in development for now, but it will work
 import { useState, useEffect } from 'react';
 import Start from './Start';
 import { canStartNextRound } from './roundUtils.js';
@@ -638,16 +639,7 @@ function SingleplayerGame() {
               </p>
             </>
           ) : (
-            <button
-              type="button"
-              className="reveal-button"
-              onClick={handleRevealEmoji}
-              disabled={isLoading}
-            >
-              {isLoading
-                ? 'Loading emoji...'
-                : 'Show me an emoji!'}
-            </button>
+
           )}
         </section>
       ) : (
