@@ -20,7 +20,6 @@ type Player = {
 type RoomState = {
   players: Player[];
   scores: Record<string, number>;
-  total_players: number;
   state: 'waiting' | 'playing' | 'ended';
   round: number;
   emoji?: string;
