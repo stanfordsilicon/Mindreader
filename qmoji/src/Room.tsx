@@ -669,6 +669,22 @@ export default function Room() {
     await submitKeywords(false);
   };
 
+  // ---- Copy invite link ----
+  // Mirrors Moji Mojo's/Emoji Blaster's identical button -- every
+  // multiplayer game in the arcade should offer the same way to invite
+  // people instead of relaying a bare room code by hand.
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const handleCopyInvite = async () => {
+    const url = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch (err) {
+      console.error('Failed to copy invite link:', err);
+    }
+    setInviteCopied(true);
+    setTimeout(() => setInviteCopied(false), 2000);
+  };
+
   // ---- Leave room ----
 
   const handleLeave = async () => {
@@ -1123,6 +1139,14 @@ export default function Room() {
                   Leave
                 </button>
               )}
+
+              <button
+                className="qmoji-btn"
+                onClick={handleCopyInvite}
+                style={{ marginTop: 8 }}
+              >
+                {inviteCopied ? 'Invite link copied!' : '📋 Copy Invite Link'}
+              </button>
 
               <p
                 style={{
