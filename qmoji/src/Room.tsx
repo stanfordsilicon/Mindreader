@@ -8,7 +8,7 @@ const API_BASE_URL = (
 ).replace(/\/$/, '');
 
 const POLL_INTERVAL_MS = 2000;
-const ROUND_SECONDS = 30;
+const ROUND_SECONDS = 15;
 const COUNTDOWN_START = 3;
 const AUTO_START_DELAY_MS = 24000;
 
@@ -42,17 +42,32 @@ export default function Room() {
 
   // ---- Room state ----
 
-  const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [hasJoined, setHasJoined] = useState(false);
-  const [error, setError] = useState('');
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [roomState, setRoomState] =
+    useState<RoomState | null>(null);
+
+  const [hasJoined, setHasJoined] =
+    useState(false);
+
+  const [error, setError] =
+    useState('');
+
+  const [submitSuccess, setSubmitSuccess] =
+    useState(false);
+
   const [roundResults, setRoundResults] =
     useState<RoundResults | null>(null);
-  const [isLoadingResults, setIsLoadingResults] = useState(false);
-  const [showResults, setShowResults] = useState(false);
 
-  const userId = localStorage.getItem('qmoji_user_id');
-  const username = localStorage.getItem('qmoji_username');
+  const [isLoadingResults, setIsLoadingResults] =
+    useState(false);
+
+  const [showResults, setShowResults] =
+    useState(false);
+
+  const userId =
+    localStorage.getItem('qmoji_user_id');
+
+  const username =
+    localStorage.getItem('qmoji_username');
 
   // ---- Playing state ----
 
@@ -81,15 +96,20 @@ export default function Room() {
 
   // ---- Timer display ----
 
-  // These must be inside the component because
-  // they depend on React state.
-
   const timerProgress = Math.max(
     0,
     Math.min(1, timeLeft / ROUND_SECONDS),
   );
 
-  const timerDegrees = timerProgress * 360;
+  const timerDegrees =
+    timerProgress * 360;
+
+  // Green normally.
+  // Red during the final 5 seconds.
+  const timerColor =
+    timeLeft <= 5
+      ? '#e02020'
+      : '#75d979';
 
   // ---- Result reveal state ----
 
@@ -106,7 +126,9 @@ export default function Room() {
 
   const [nextRoundCountdown, setNextRoundCountdown] =
     useState(
-      Math.ceil(AUTO_START_DELAY_MS / 1000),
+      Math.ceil(
+        AUTO_START_DELAY_MS / 1000,
+      ),
     );
 
   // ---- Timer refs ----
@@ -137,8 +159,6 @@ export default function Room() {
 
   // ---- Host ----
 
-  // The first player in the list is treated as the host.
-
   const isHost = Boolean(
     roomState?.players[0]?.user_id &&
       roomState.players[0].user_id === userId,
@@ -152,9 +172,10 @@ export default function Room() {
         return 'You';
       }
 
-      const match = roomState?.players.find(
-        (p) => p.user_id === id,
-      );
+      const match =
+        roomState?.players.find(
+          (p) => p.user_id === id,
+        );
 
       return (
         match?.name ??
@@ -194,8 +215,6 @@ export default function Room() {
 
     const join = async () => {
       try {
-        // Check whether the user is already in the room.
-
         try {
           const stateRes = await fetch(
             `${API_BASE_URL}/${roomId}/state`,
@@ -337,8 +356,6 @@ export default function Room() {
     }
   }, [roomId]);
 
-  // Poll every 2 seconds.
-
   useEffect(() => {
     if (!hasJoined) return;
 
@@ -375,17 +392,15 @@ export default function Room() {
     }
 
     if (countdownValue > 0) {
-      const timer = window.setTimeout(
-        () => {
+      const timer =
+        window.setTimeout(() => {
           setCountdownValue(
             (prev) =>
               prev !== null
                 ? prev - 1
                 : null,
           );
-        },
-        1000,
-      );
+        }, 1000);
 
       return () =>
         window.clearTimeout(timer);
@@ -533,12 +548,10 @@ export default function Room() {
 
           setSubmitSuccess(true);
 
-          // Refresh submitted_count.
-
           await fetchState();
 
           // Automatically open results
-          // after the timeout submission.
+          // after timeout submission.
 
           if (automatic) {
             await fetchRoundResults();
@@ -586,15 +599,13 @@ export default function Room() {
     }
 
     if (timeLeft > 0) {
-      const timer = window.setTimeout(
-        () => {
+      const timer =
+        window.setTimeout(() => {
           setTimeLeft(
             (prev) =>
               prev - 1,
           );
-        },
-        1000,
-      );
+        }, 1000);
 
       return () =>
         window.clearTimeout(timer);
@@ -1218,33 +1229,6 @@ export default function Room() {
                 '0 12px 40px rgba(0,0,0,0.35)',
             }}
           >
-            <button
-              type="button"
-              onClick={() =>
-                setShowResults(false)
-              }
-              aria-label="Close"
-              style={{
-                position:
-                  'absolute',
-                top: '10px',
-                right: '10px',
-                border:
-                  'none',
-                background:
-                  'transparent',
-                fontSize:
-                  '1.1rem',
-                cursor:
-                  'pointer',
-                lineHeight: 1,
-                padding: '4px',
-                color:
-                  'var(--qmoji-ink)',
-              }}
-            >
-              ✕
-            </button>
 
             <h3
               style={{
@@ -1736,36 +1720,35 @@ export default function Room() {
                       maxHeight:
                         '80vw',
                       margin:
-                        '20px auto 24px',
+                        '20px auto 52px',
                       borderRadius:
                         '50%',
+
+                      // Green from 20-6 seconds,
+                      // red during final 5 seconds.
                       background: `conic-gradient(
-                        #e02020 0deg ${timerDegrees}deg,
+                        ${timerColor} 0deg ${timerDegrees}deg,
                         #f4f4f4 ${timerDegrees}deg 360deg
                       )`,
+
                       display:
                         'flex',
                       alignItems:
                         'center',
                       justifyContent:
                         'center',
+
                       transition:
-                        'background 0.3s linear',
-                      animation:
-                        timeLeft <=
-                        5
-                          ? 'qmoji-timer-pulse 1s ease-in-out infinite'
-                          : 'none',
+                        'background 0.3s ease',
                     }}
                   >
-                    {/* Inner circle */}
-
                     <div
                       style={{
+                        // 14px ring thickness.
                         width:
-                          'calc(100% - 8px)',
+                          'calc(100% - 28px)',
                         height:
-                          'calc(100% - 8px)',
+                          'calc(100% - 28px)',
                         borderRadius:
                           '50%',
                         background:
@@ -1778,6 +1761,8 @@ export default function Room() {
                           'center',
                         fontSize:
                           '7rem',
+                        lineHeight:
+                          1,
                       }}
                     >
                       {roomState?.emoji}
@@ -1790,7 +1775,7 @@ export default function Room() {
                         position:
                           'absolute',
                         bottom:
-                          '32px',
+                          '-34px',
                         left: 0,
                         right: 0,
                         textAlign:
@@ -1805,10 +1790,7 @@ export default function Room() {
                           timeLeft <=
                           5
                             ? '#e02020'
-                            : timeLeft <=
-                              15
-                              ? '#d49a00'
-                              : '#333',
+                            : '#75d979',
                       }}
                     >
                       {timeLeft >
