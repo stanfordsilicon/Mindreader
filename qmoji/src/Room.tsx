@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import Podium from './podium';
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ??
@@ -20,6 +19,7 @@ type Player = {
 type RoomState = {
   players: Player[];
   scores: Record<string, number>;
+  total_players: number;
   state: 'waiting' | 'playing' | 'ended';
   round: number;
   emoji?: string;
@@ -375,14 +375,14 @@ export default function Room() {
     if (
       phase === 'playing' &&
       roomState &&
-      roomState.submitted_count === roomState.total_players &&
-      roomState.total_players > 0 &&
+      roomState.submitted_count === totalPlayers &&
+      totalPlayers > 0 &&
       (!roundResults ||
         roundResults.round !== roomState.round)
     ) {
       fetchRoundResults();
     }
-  }, [phase, roomState, roundResults, fetchRoundResults]);
+  }, [phase, roomState, totalPlayers, roundResults, fetchRoundResults]);
 
   // ---- Automatic next round ----
 
@@ -1155,125 +1155,35 @@ export default function Room() {
                     {roomState.emoji}
                   </div>
 
-                  <p
-                    style={{
-                      textAlign: 'center',
-                      fontSize: '0.7rem',
-                      opacity: 0.8,
-                      marginBottom: 14,
-                    }}
-                  >
-                    {roomState.submitted_count} /{' '}
-                    {roomState.total_players} players have submitted
-                  </p>
+                  <form onSubmit={handleSubmit}>
+                    <div style={{ display: 'grid', gap: '8px', marginBottom: 16 }}>
+                      {keywords.map((kw, i) => (
+                        <input
+                          key={i}
+                          type="text"
+                          className="qmoji-input"
+                          placeholder={`Keyword ${i + 1}`}
+                          value={kw}
+                          onChange={(e) => handleKeywordChange(i, e.target.value)}
+                          disabled={alreadySubmitted || isSubmitting}
+                        />
+                      ))}
+                    </div>
 
-                  {!alreadySubmitted ? (
-                    <form
-                      onSubmit={handleSubmit}
-                      onKeyDown={(
-                        e: React.KeyboardEvent<HTMLFormElement>,
-                      ) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                        }
-                      }}
+                    <button
+                      type="submit"
+                      className="qmoji-btn qmoji-btn-green"
+                      disabled={alreadySubmitted || isSubmitting}
                     >
-                      <div
-                        className="qmoji-word-grid"
-                        style={{ marginBottom: 14 }}
-                      >
-                        {keywords.map((kw, i) => (
-                          <input
-                            key={i}
-                            type="text"
-                            className="qmoji-input"
-                            value={kw}
-                            placeholder={`Keyword ${i + 1}`}
-                            onChange={(e) =>
-                              handleKeywordChange(
-                                i,
-                                e.target.value,
-                              )
-                            }
-                            disabled={
-                              isSubmitting ||
-                              timeLeft === 0
-                            }
-                          />
-                        ))}
-                      </div>
-
-                      <button
-                        type="submit"
-                        className="qmoji-btn qmoji-btn-green"
-                        disabled={
-                          isSubmitting ||
-                          timeLeft === 0
-                        }
-                      >
-                        {isSubmitting
-                          ? 'Saving...'
-                          : 'Enter word'}
-                      </button>
-                    </form>
-                  ) : (
-                    <p
-                      style={{
-                        textAlign: 'center',
-                        fontStyle: 'italic',
-                        fontSize: '0.75rem',
-                        opacity: 0.8,
-                      }}
-                    >
-                      Waiting for other players or timer expiration...
-                    </p>
-                  )}
+                      {alreadySubmitted ? 'Submitted' : isSubmitting ? 'Saving...' : 'Submit'}
+                    </button>
+                  </form>
                 </>
-              )}
-
-              {/* Live scoreboard during the round. */}
-              {phase === 'playing' && (
-                <div style={{ marginTop: 20 }}>
-                  {sortedScoreboard.map(
-                    (p, index) => (
-                      <div
-                        key={p.user_id}
-                        className={`qmoji-score-row ${
-                          index === 0 ? 'leader' : ''
-                        }`}
-                      >
-                        <span>
-                          {index === 0 ? '👑 ' : ''}
-                          {p.name}
-                          {p.user_id === userId
-                            ? ' (you)'
-                            : ''}
-                        </span>
-
-                        <span>{p.score}</span>
-                      </div>
-                    ),
-                  )}
-                </div>
               )}
             </div>
           )}
-
-          {/* ---- Game over ---- */}
-
-          {roomState.state === 'ended' && (
-            <Podium
-              players={sortedScoreboard}
-              onPlayAgain={handleStartRound}
-              onLeave={handleLeave}
-            />
-          )}
         </>
       )}
-
-      <p className="qmoji-footer">
-        Powered by SILICON @ Stanford
-      </p>
     </div>
   );
 }
