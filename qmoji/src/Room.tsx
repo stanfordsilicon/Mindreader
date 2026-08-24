@@ -79,7 +79,10 @@ export default function Room() {
   const [revealedPlayerId, setRevealedPlayerId] =
     useState<string | null>(null);
 
-  // ---- Timer visuals ----
+  // ---- Timer display ----
+
+  // These must be inside the component because
+  // they depend on React state.
 
   const timerProgress = Math.max(
     0,
@@ -88,17 +91,14 @@ export default function Room() {
 
   const timerDegrees = timerProgress * 360;
 
-  const timerColor =
-    timeLeft <= 5
-      ? '#e02020'
-      : timeLeft <= 15
-        ? '#f5c542'
-        : '#48d35a';
-
   // ---- Result reveal state ----
 
-  const [revealedCount, setRevealedCount] = useState(0);
-  const [revealIndex, setRevealIndex] = useState(0);
+  const [revealedCount, setRevealedCount] =
+    useState(0);
+
+  const [revealIndex, setRevealIndex] =
+    useState(0);
+
   const [revealPlayers, setRevealPlayers] =
     useState<Player[]>([]);
 
@@ -109,43 +109,48 @@ export default function Room() {
       Math.ceil(AUTO_START_DELAY_MS / 1000),
     );
 
-  // ---- Refs ----
+  // ---- Timer refs ----
 
-  const revealTimerRef = useRef<number | null>(null);
+  const revealTimerRef =
+    useRef<number | null>(null);
+
   const playerAdvanceTimerRef =
     useRef<number | null>(null);
 
-  const pollRef = useRef<number | null>(null);
+  const pollRef =
+    useRef<number | null>(null);
 
-  const lastRoundRef = useRef<number>(0);
+  const lastRoundRef =
+    useRef<number>(0);
 
   const autoStartTimerRef =
     useRef<number | null>(null);
 
-  const hasJoinedRef = useRef(false);
+  const hasJoinedRef =
+    useRef(false);
 
-  // Prevent automatic submission more than once
-  // for the same round.
+  // Prevent automatic submission from happening
+  // more than once for the same round.
+
   const autoSubmittedRoundRef =
     useRef<number | null>(null);
 
-  // Prevent multiple requests for results for
-  // the same round.
-  const resultsRequestedRoundRef =
-    useRef<number | null>(null);
-
   // ---- Host ----
+
+  // The first player in the list is treated as the host.
 
   const isHost = Boolean(
     roomState?.players[0]?.user_id &&
       roomState.players[0].user_id === userId,
   );
 
-  // ---- Player name helper ----
+  // ---- Player names ----
 
   const getPlayerName = useCallback(
     (id: string) => {
-      if (id === userId) return 'You';
+      if (id === userId) {
+        return 'You';
+      }
 
       const match = roomState?.players.find(
         (p) => p.user_id === id,
@@ -189,7 +194,8 @@ export default function Room() {
 
     const join = async () => {
       try {
-        // Check whether we're already in the room.
+        // Check whether the user is already in the room.
+
         try {
           const stateRes = await fetch(
             `${API_BASE_URL}/${roomId}/state`,
@@ -218,7 +224,8 @@ export default function Room() {
           {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type':
+                'application/json',
             },
             body: JSON.stringify({
               username,
@@ -228,9 +235,8 @@ export default function Room() {
         );
 
         if (!res.ok) {
-          const data = await res
-            .json()
-            .catch(() => ({}));
+          const data =
+            await res.json().catch(() => ({}));
 
           throw new Error(
             data.error ||
@@ -270,7 +276,9 @@ export default function Room() {
       );
 
       if (res.status === 404) {
-        setError('Room no longer exists.');
+        setError(
+          'Room no longer exists.',
+        );
         return;
       }
 
@@ -284,21 +292,20 @@ export default function Room() {
         await res.json();
 
       // Detect a new round.
+
       if (
         data.round >
         lastRoundRef.current
       ) {
-        lastRoundRef.current = data.round;
+        lastRoundRef.current =
+          data.round;
 
-        // Reset automatic submission guard.
+        // Allow automatic submission
+        // again for the new round.
+
         autoSubmittedRoundRef.current =
           null;
 
-        // Reset result request guard.
-        resultsRequestedRoundRef.current =
-          null;
-
-        // Reset round UI.
         setKeywords([
           '',
           '',
@@ -309,7 +316,6 @@ export default function Room() {
         setSubmitSuccess(false);
         setShowResults(false);
         setRoundResults(null);
-
         setTimeLeft(ROUND_SECONDS);
 
         if (data.state === 'playing') {
@@ -330,6 +336,8 @@ export default function Room() {
       );
     }
   }, [roomId]);
+
+  // Poll every 2 seconds.
 
   useEffect(() => {
     if (!hasJoined) return;
@@ -355,7 +363,7 @@ export default function Room() {
   ]);
 
   // ============================================================
-  // 3 → 2 → 1 countdown
+  // Countdown
   // ============================================================
 
   useEffect(() => {
@@ -398,23 +406,6 @@ export default function Room() {
     useCallback(async () => {
       if (!roomId) return;
 
-      const currentRound =
-        roomState?.round;
-
-      // Don't request the same round twice.
-      if (
-        currentRound !== undefined &&
-        resultsRequestedRoundRef.current ===
-          currentRound
-      ) {
-        return;
-      }
-
-      if (currentRound !== undefined) {
-        resultsRequestedRoundRef.current =
-          currentRound;
-      }
-
       setIsLoadingResults(true);
 
       try {
@@ -442,17 +433,6 @@ export default function Room() {
         setShowResults(true);
         setPhase('results');
       } catch (err: any) {
-        // Allow another attempt if loading
-        // results failed.
-        if (
-          currentRound !== undefined &&
-          resultsRequestedRoundRef.current ===
-            currentRound
-        ) {
-          resultsRequestedRoundRef.current =
-            null;
-        }
-
         setError(
           err.message ||
             'Failed to load round results.',
@@ -460,17 +440,14 @@ export default function Room() {
       } finally {
         setIsLoadingResults(false);
       }
-    }, [
-      roomId,
-      roomState?.round,
-    ]);
+    }, [roomId]);
 
   // ============================================================
   // Keyword submission
   //
   // Used by:
-  // 1. Manual "Enter word" button
-  // 2. Automatic timeout submission
+  // 1. Manual "Enter word" submission.
+  // 2. Automatic submission when timer hits zero.
   // ============================================================
 
   const submitKeywords =
@@ -480,23 +457,45 @@ export default function Room() {
           return;
         }
 
+        const currentRound =
+          roomState?.round;
+
+        // Prevent duplicate automatic submissions.
+
+        if (
+          automatic &&
+          currentRound !== undefined &&
+          autoSubmittedRoundRef.current ===
+            currentRound
+        ) {
+          return;
+        }
+
         const filled = keywords
           .map((keyword) =>
             keyword.trim(),
           )
           .filter(
-            (keyword) => keyword !== '',
+            (keyword) =>
+              keyword !== '',
           );
 
-        // If the timer expires and the user
-        // entered nothing, proceed directly
-        // to results.
+        // Don't submit an empty answer.
+
         if (filled.length === 0) {
           if (automatic) {
             await fetchRoundResults();
           }
 
           return;
+        }
+
+        if (
+          automatic &&
+          currentRound !== undefined
+        ) {
+          autoSubmittedRoundRef.current =
+            currentRound;
         }
 
         setIsSubmitting(true);
@@ -522,7 +521,9 @@ export default function Room() {
             const data =
               await res
                 .json()
-                .catch(() => ({}));
+                .catch(
+                  () => ({}),
+                );
 
             throw new Error(
               data.error ||
@@ -532,21 +533,26 @@ export default function Room() {
 
           setSubmitSuccess(true);
 
-          // Update submitted_count.
+          // Refresh submitted_count.
+
           await fetchState();
 
-          // Timeout submission should move
-          // directly to results.
+          // Automatically open results
+          // after the timeout submission.
+
           if (automatic) {
             await fetchRoundResults();
           }
         } catch (err: any) {
-          // If automatic submission failed,
-          // allow it to be attempted again.
+          // Allow retry if automatic
+          // submission failed.
+
           if (
             automatic &&
-            roomState?.round !==
-              undefined
+            currentRound !==
+              undefined &&
+            autoSubmittedRoundRef.current ===
+              currentRound
           ) {
             autoSubmittedRoundRef.current =
               null;
@@ -571,7 +577,7 @@ export default function Room() {
     );
 
   // ============================================================
-  // 30-second round timer
+  // Round timer
   // ============================================================
 
   useEffect(() => {
@@ -582,8 +588,9 @@ export default function Room() {
     if (timeLeft > 0) {
       const timer = window.setTimeout(
         () => {
-          setTimeLeft((prev) =>
-            Math.max(0, prev - 1),
+          setTimeLeft(
+            (prev) =>
+              prev - 1,
           );
         },
         1000,
@@ -593,54 +600,34 @@ export default function Room() {
         window.clearTimeout(timer);
     }
 
-    const currentRound =
-      roomState?.round;
-
-    if (currentRound === undefined) {
-      return;
-    }
+    // Timer reached zero.
 
     const alreadySubmitted =
-      roomState.submitted_user_ids.includes(
+      roomState?.submitted_user_ids.includes(
         userId ?? '',
-      );
+      ) ?? false;
 
-    // The user manually submitted before
-    // the timer expired.
-    if (alreadySubmitted) {
-      if (
-        !roundResults ||
-        roundResults.round !==
-          currentRound
-      ) {
-        fetchRoundResults();
-      }
-
-      return;
-    }
-
-    // Already attempted automatic submission
-    // for this round.
     if (
-      autoSubmittedRoundRef.current ===
-      currentRound
+      !alreadySubmitted &&
+      !isSubmitting
     ) {
-      return;
+      // Automatically submit whatever
+      // the player has typed.
+
+      submitKeywords(true);
+    } else if (
+      !roundResults ||
+      roundResults.round !==
+        roomState?.round
+    ) {
+      fetchRoundResults();
     }
-
-    // Lock immediately BEFORE submitting.
-    // This prevents React re-renders from
-    // triggering multiple requests.
-    autoSubmittedRoundRef.current =
-      currentRound;
-
-    submitKeywords(true);
   }, [
     phase,
     timeLeft,
-    roomState?.round,
-    roomState?.submitted_user_ids,
+    roomState,
     userId,
+    isSubmitting,
     roundResults,
     submitKeywords,
     fetchRoundResults,
@@ -652,16 +639,11 @@ export default function Room() {
 
   useEffect(() => {
     if (
-      phase !== 'playing' ||
-      !roomState ||
-      roomState.total_players <= 0
-    ) {
-      return;
-    }
-
-    if (
+      phase === 'playing' &&
+      roomState &&
       roomState.submitted_count ===
-      roomState.total_players &&
+        roomState.total_players &&
+      roomState.total_players > 0 &&
       (!roundResults ||
         roundResults.round !==
           roomState.round)
@@ -681,33 +663,39 @@ export default function Room() {
 
   useEffect(() => {
     if (
-      !showResults ||
-      !isHost ||
-      roomState?.state !== 'playing'
+      showResults &&
+      isHost &&
+      roomState?.state === 'playing'
     ) {
-      return;
-    }
-
-    if (autoStartTimerRef.current) {
-      window.clearTimeout(
-        autoStartTimerRef.current,
-      );
-    }
-
-    autoStartTimerRef.current =
-      window.setTimeout(() => {
-        handleStartRound();
-      }, AUTO_START_DELAY_MS);
-
-    return () => {
-      if (autoStartTimerRef.current) {
+      if (
+        autoStartTimerRef.current
+      ) {
         window.clearTimeout(
           autoStartTimerRef.current,
         );
-
-        autoStartTimerRef.current = null;
       }
-    };
+
+      autoStartTimerRef.current =
+        window.setTimeout(
+          () => {
+            handleStartRound();
+          },
+          AUTO_START_DELAY_MS,
+        );
+
+      return () => {
+        if (
+          autoStartTimerRef.current
+        ) {
+          window.clearTimeout(
+            autoStartTimerRef.current,
+          );
+
+          autoStartTimerRef.current =
+            null;
+        }
+      };
+    }
   }, [
     showResults,
     isHost,
@@ -715,7 +703,7 @@ export default function Room() {
   ]);
 
   // ============================================================
-  // Next-round countdown
+  // Next-round live countdown
   // ============================================================
 
   useEffect(() => {
@@ -751,7 +739,9 @@ export default function Room() {
       }, 1000);
 
     return () =>
-      window.clearInterval(interval);
+      window.clearInterval(
+        interval,
+      );
   }, [
     showResults,
     isHost,
@@ -823,14 +813,18 @@ export default function Room() {
         Object.keys(answers).length,
       );
 
-    const goToNextPlayer = () => {
-      playerAdvanceTimerRef.current =
-        window.setTimeout(() => {
-          setRevealIndex(
-            (i) => i + 1,
+    const goToNextPlayer =
+      () => {
+        playerAdvanceTimerRef.current =
+          window.setTimeout(
+            () => {
+              setRevealIndex(
+                (i) => i + 1,
+              );
+            },
+            3600,
           );
-        }, 3600);
-    };
+      };
 
     if (totalKeywords === 0) {
       goToNextPlayer();
@@ -838,28 +832,34 @@ export default function Room() {
       let count = 0;
 
       revealTimerRef.current =
-        window.setInterval(() => {
-          count += 1;
+        window.setInterval(
+          () => {
+            count += 1;
 
-          setRevealedCount(count);
+            setRevealedCount(
+              count,
+            );
 
-          if (
-            count >= totalKeywords
-          ) {
             if (
-              revealTimerRef.current
+              count >=
+              totalKeywords
             ) {
-              window.clearInterval(
-                revealTimerRef.current,
-              );
+              if (
+                revealTimerRef.current
+              ) {
+                window.clearInterval(
+                  revealTimerRef.current,
+                );
 
-              revealTimerRef.current =
-                null;
+                revealTimerRef.current =
+                  null;
+              }
+
+              goToNextPlayer();
             }
-
-            goToNextPlayer();
-          }
-        }, 1500);
+          },
+          1500,
+        );
     }
 
     return () => {
@@ -915,18 +915,23 @@ export default function Room() {
           const data =
             await res
               .json()
-              .catch(() => ({}));
+              .catch(
+                () => ({}),
+              );
 
           if (
-            data.state === 'ended'
+            data.state ===
+            'ended'
           ) {
-            setRoomState((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    state: 'ended',
-                  }
-                : prev,
+            setRoomState(
+              (prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      state:
+                        'ended',
+                    }
+                  : prev,
             );
 
             setShowResults(false);
@@ -984,9 +989,10 @@ export default function Room() {
       return;
     }
 
-    const filled = keywords.filter(
-      (k) => k.trim() !== '',
-    );
+    const filled =
+      keywords.filter(
+        (k) => k.trim() !== '',
+      );
 
     if (filled.length === 0) {
       setError(
@@ -1098,16 +1104,6 @@ export default function Room() {
           color: #999;
         }
 
-        .qmoji-round-timer {
-          transition:
-            background 0.4s linear,
-            transform 0.2s ease;
-        }
-
-        .qmoji-round-timer:hover {
-          transform: scale(1.01);
-        }
-
         @keyframes qmoji-pop {
           from {
             transform: scale(0.7);
@@ -1126,12 +1122,8 @@ export default function Room() {
           }
 
           50% {
-            transform: scale(1.025);
+            transform: scale(1.03);
           }
-        }
-
-        .qmoji-timer-danger {
-          animation: qmoji-timer-pulse 0.8s ease-in-out infinite;
         }
       `}</style>
 
@@ -1141,7 +1133,7 @@ export default function Room() {
 
       <p className="qmoji-subtitle">
         Describe the emoji with up to four
-        keywords in 30 seconds!
+        keywords!
       </p>
 
       {error && (
@@ -1151,10 +1143,14 @@ export default function Room() {
             background:
               'rgba(192,57,43,0.25)',
             borderRadius: 8,
-            padding: '8px 12px',
-            marginBottom: '14px',
-            fontSize: '0.75rem',
-            textAlign: 'center',
+            padding:
+              '8px 12px',
+            marginBottom:
+              '14px',
+            fontSize:
+              '0.75rem',
+            textAlign:
+              'center',
           }}
         >
           {error}
@@ -1167,9 +1163,12 @@ export default function Room() {
             style={{
               color:
                 'var(--qmoji-green-bright)',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              fontSize: '0.8rem',
+              fontWeight:
+                'bold',
+              textAlign:
+                'center',
+              fontSize:
+                '0.8rem',
             }}
           >
             Successfully saved your
@@ -1177,9 +1176,9 @@ export default function Room() {
           </p>
         )}
 
-      {/* ======================================================
+      {/* ========================================================
           ROUND RESULTS MODAL
-          ====================================================== */}
+          ======================================================== */}
 
       {showResults && (
         <div
@@ -1195,8 +1194,10 @@ export default function Room() {
             background:
               'rgba(0, 0, 0, 0.55)',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            alignItems:
+              'center',
+            justifyContent:
+              'center',
             padding: '16px',
             zIndex: 1000,
           }}
@@ -1211,7 +1212,8 @@ export default function Room() {
               maxWidth: '380px',
               maxHeight: '80vh',
               overflowY: 'auto',
-              position: 'relative',
+              position:
+                'relative',
               boxShadow:
                 '0 12px 40px rgba(0,0,0,0.35)',
             }}
@@ -1223,14 +1225,18 @@ export default function Room() {
               }
               aria-label="Close"
               style={{
-                position: 'absolute',
+                position:
+                  'absolute',
                 top: '10px',
                 right: '10px',
-                border: 'none',
+                border:
+                  'none',
                 background:
                   'transparent',
-                fontSize: '1.1rem',
-                cursor: 'pointer',
+                fontSize:
+                  '1.1rem',
+                cursor:
+                  'pointer',
                 lineHeight: 1,
                 padding: '4px',
                 color:
@@ -1242,9 +1248,11 @@ export default function Room() {
 
             <h3
               style={{
-                textAlign: 'center',
+                textAlign:
+                  'center',
                 marginTop: 0,
-                marginBottom: '8px',
+                marginBottom:
+                  '8px',
               }}
             >
               Round{' '}
@@ -1254,9 +1262,12 @@ export default function Room() {
 
             <div
               style={{
-                fontSize: '3.5rem',
-                textAlign: 'center',
-                marginBottom: '16px',
+                fontSize:
+                  '3.5rem',
+                textAlign:
+                  'center',
+                marginBottom:
+                  '16px',
                 lineHeight: 1,
               }}
             >
@@ -1266,7 +1277,8 @@ export default function Room() {
             {isLoadingResults ? (
               <p
                 style={{
-                  textAlign: 'center',
+                  textAlign:
+                    'center',
                 }}
               >
                 Loading results...
@@ -1277,12 +1289,14 @@ export default function Room() {
 
                 <div
                   style={{
-                    marginBottom: '24px',
+                    marginBottom:
+                      '24px',
                   }}
                 >
                   <div
                     style={{
-                      display: 'flex',
+                      display:
+                        'flex',
                       justifyContent:
                         'center',
                       alignItems:
@@ -1355,7 +1369,9 @@ export default function Room() {
                           score,
                         ]) => (
                           <div
-                            key={keyword}
+                            key={
+                              keyword
+                            }
                             className={`qmoji-answer-card ${
                               score >
                               0
@@ -1369,11 +1385,12 @@ export default function Room() {
                       )}
 
                     {Array.from({
-                      length: Math.max(
-                        0,
-                        4 -
-                          revealedCount,
-                      ),
+                      length:
+                        Math.max(
+                          0,
+                          4 -
+                            revealedCount,
+                        ),
                     }).map(
                       (_, i) => (
                         <div
@@ -1393,7 +1410,8 @@ export default function Room() {
                   style={{
                     borderTop:
                       '1px solid rgba(0,0,0,0.1)',
-                    paddingTop: '16px',
+                    paddingTop:
+                      '16px',
                   }}
                 >
                   {Object.entries(
@@ -1414,7 +1432,8 @@ export default function Room() {
                         <div
                           key={id}
                           className={`qmoji-score-row ${
-                            index === 0
+                            index ===
+                            0
                               ? 'leader'
                               : ''
                           }`}
@@ -1474,8 +1493,7 @@ export default function Room() {
                           }}
                         >
                           {index +
-                            1}
-                          .{' '}
+                            1}.{' '}
                           {getPlayerName(
                             id,
                           )}
@@ -1484,8 +1502,6 @@ export default function Room() {
                       ),
                     )}
                 </div>
-
-                {/* Next round countdown */}
 
                 {isHost &&
                   roomState?.state ===
@@ -1496,7 +1512,8 @@ export default function Room() {
                           'center',
                         fontSize:
                           '0.7rem',
-                        marginTop: 12,
+                        marginTop:
+                          12,
                       }}
                     >
                       Next round in{' '}
@@ -1563,44 +1580,51 @@ export default function Room() {
         </div>
       )}
 
-      {/* ======================================================
+      {/* ========================================================
           MAIN ROOM STATES
-          ====================================================== */}
+          ======================================================== */}
 
       {!roomState ? (
         <p
           style={{
-            textAlign: 'center',
-            fontSize: '0.8rem',
+            textAlign:
+              'center',
+            fontSize:
+              '0.8rem',
           }}
         >
           Loading room...
         </p>
       ) : (
         <>
-          {/* ==================================================
+          {/* ====================================================
               WAITING ROOM
-              ================================================== */}
+              ==================================================== */}
 
           {roomState.state ===
             'waiting' && (
             <div className="qmoji-panel-yellow">
               <h3>
-                Waiting for all players...
+                Waiting for all
+                players...
               </h3>
 
               <div className="qmoji-pill-row">
                 {roomState.players.map(
                   (p, index) => (
                     <span
-                      key={p.user_id}
+                      key={
+                        p.user_id
+                      }
                       className={`qmoji-pill ${
-                        index === 0
+                        index ===
+                        0
                           ? 'host'
                           : ''
                       }`}
                     >
                       {p.name}
+
                       {p.user_id ===
                       userId
                         ? ' (you)'
@@ -1648,7 +1672,8 @@ export default function Room() {
                   textAlign:
                     'center',
                   marginTop: 10,
-                  opacity: 0.8,
+                  opacity:
+                    0.8,
                 }}
               >
                 <strong>
@@ -1658,20 +1683,21 @@ export default function Room() {
             </div>
           )}
 
-          {/* ==================================================
+          {/* ====================================================
               ACTIVE ROUND
-              ================================================== */}
+              ==================================================== */}
 
           {roomState.state ===
             'playing' && (
             <div>
-              {/* 3 → 2 → 1 */}
+              {/* Countdown */}
 
               {phase ===
                 'countdown' &&
                 countdownValue !==
                   null &&
-                countdownValue > 0 && (
+                countdownValue >
+                  0 && (
                   <div
                     style={{
                       fontSize:
@@ -1693,42 +1719,43 @@ export default function Room() {
               {phase ===
                 'playing' && (
                 <>
-                  {/* ========================================
-                      CIRCULAR TIMER + EMOJI
-                      ======================================== */}
+                  {/* =================================================
+                      CIRCULAR TIMER
+                      ================================================= */}
 
                   <div
-                    className={
-                      timeLeft <= 5
-                        ? 'qmoji-round-timer qmoji-timer-danger'
-                        : 'qmoji-round-timer'
-                    }
-                    role="timer"
-                    aria-label={`${
-                      timeLeft
-                    } seconds remaining`}
                     style={{
                       position:
                         'relative',
                       width:
-                        'min(375px, 80vw)',
-                      aspectRatio:
-                        '1',
+                        '375px',
+                      height:
+                        '375px',
+                      maxWidth:
+                        '80vw',
+                      maxHeight:
+                        '80vw',
                       margin:
                         '20px auto 24px',
                       borderRadius:
                         '50%',
-                      background:
-                        `conic-gradient(
-                          ${timerColor} 0deg ${timerDegrees}deg,
-                          rgba(255,255,255,0.16) ${timerDegrees}deg 360deg
-                        )`,
+                      background: `conic-gradient(
+                        #e02020 0deg ${timerDegrees}deg,
+                        #f4f4f4 ${timerDegrees}deg 360deg
+                      )`,
                       display:
                         'flex',
                       alignItems:
                         'center',
                       justifyContent:
                         'center',
+                      transition:
+                        'background 0.3s linear',
+                      animation:
+                        timeLeft <=
+                        5
+                          ? 'qmoji-timer-pulse 1s ease-in-out infinite'
+                          : 'none',
                     }}
                   >
                     {/* Inner circle */}
@@ -1736,68 +1763,62 @@ export default function Room() {
                     <div
                       style={{
                         width:
-                          'calc(100% - 12px)',
+                          'calc(100% - 8px)',
                         height:
-                          'calc(100% - 12px)',
+                          'calc(100% - 8px)',
                         borderRadius:
                           '50%',
                         background:
-                          'var(--qmoji-purple, #5b1b61)',
+                          '#f4f4f4',
                         display:
                           'flex',
                         alignItems:
                           'center',
                         justifyContent:
                           'center',
-                        position:
-                          'relative',
+                        fontSize:
+                          '7rem',
                       }}
                     >
-                      {/* Emoji */}
+                      {roomState?.emoji}
+                    </div>
 
-                      <div
-                        style={{
-                          fontSize:
-                            'clamp(5rem, 15vw, 7rem)',
-                          lineHeight: 1,
-                          userSelect:
-                            'none',
-                        }}
-                      >
-                        {
-                          roomState.emoji
-                        }
-                      </div>
+                    {/* Timer text */}
 
-                      {/* Timer text */}
-
-                      <div
-                        style={{
-                          position:
-                            'absolute',
-                          bottom:
-                            '19%',
-                          fontFamily:
-                            'var(--font-display)',
-                          fontSize:
-                            '1rem',
-                          fontWeight:
-                            'bold',
-                          color:
-                            timerColor,
-                          transition:
-                            'color 0.3s ease',
-                        }}
-                      >
-                        {timeLeft >
-                        0
-                          ? `${timeLeft}s`
-                          : 'Submitting...'}
-                      </div>
+                    <div
+                      style={{
+                        position:
+                          'absolute',
+                        bottom:
+                          '32px',
+                        left: 0,
+                        right: 0,
+                        textAlign:
+                          'center',
+                        fontFamily:
+                          'var(--font-display)',
+                        fontSize:
+                          '1rem',
+                        fontWeight:
+                          'bold',
+                        color:
+                          timeLeft <=
+                          5
+                            ? '#e02020'
+                            : timeLeft <=
+                              15
+                              ? '#d49a00'
+                              : '#333',
+                      }}
+                    >
+                      {timeLeft >
+                      0
+                        ? `${timeLeft}s`
+                        : "Time's up!"}
                     </div>
                   </div>
 
-                  {/* Submission count */}
+                  {/* Submission counter */}
 
                   <p
                     style={{
@@ -1805,7 +1826,8 @@ export default function Room() {
                         'center',
                       fontSize:
                         '0.7rem',
-                      opacity: 0.8,
+                      opacity:
+                        0.8,
                       marginBottom:
                         14,
                     }}
@@ -1821,9 +1843,9 @@ export default function Room() {
                     submitted
                   </p>
 
-                  {/* ========================================
-                      KEYWORD INPUT
-                      ======================================== */}
+                  {/* =================================================
+                      KEYWORD FORM
+                      ================================================= */}
 
                   {!alreadySubmitted ? (
                     <form
@@ -1854,7 +1876,9 @@ export default function Room() {
                             i,
                           ) => (
                             <input
-                              key={i}
+                              key={
+                                i
+                              }
                               type="text"
                               className="qmoji-input"
                               value={
@@ -1911,23 +1935,25 @@ export default function Room() {
                           0.8,
                       }}
                     >
-                      Your words
-                      are locked
-                      in!
+                      Waiting for
+                      other players
+                      or timer
+                      expiration...
                     </p>
                   )}
                 </>
               )}
 
-              {/* ==========================================
+              {/* =================================================
                   LIVE SCOREBOARD
-                  ========================================== */}
+                  ================================================= */}
 
               {phase ===
                 'playing' && (
                 <div
                   style={{
-                    marginTop: 20,
+                    marginTop:
+                      20,
                   }}
                 >
                   {sortedScoreboard.map(
@@ -1940,7 +1966,8 @@ export default function Room() {
                           p.user_id
                         }
                         className={`qmoji-score-row ${
-                          index === 0
+                          index ===
+                          0
                             ? 'leader'
                             : ''
                         }`}
@@ -1950,9 +1977,9 @@ export default function Room() {
                           0
                             ? '👑 '
                             : ''}
-                          {
-                            p.name
-                          }
+
+                          {p.name}
+
                           {p.user_id ===
                           userId
                             ? ' (you)'
@@ -1960,9 +1987,7 @@ export default function Room() {
                         </span>
 
                         <span>
-                          {
-                            p.score
-                          }
+                          {p.score}
                         </span>
                       </div>
                     ),
@@ -1972,9 +1997,9 @@ export default function Room() {
             </div>
           )}
 
-          {/* ==================================================
+          {/* ====================================================
               GAME OVER
-              ================================================== */}
+              ==================================================== */}
 
           {roomState.state ===
             'ended' && (
