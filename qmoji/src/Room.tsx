@@ -86,7 +86,15 @@ export default function Room() {
   const pollRef = useRef<number | null>(null);
   const lastRoundRef = useRef<number>(0);
   const autoStartTimerRef = useRef<number | null>(null);
-  const hasJoinedRef = useRef(false); // <-- prevents double join in Strict Mode
+  const hasJoinedRef = useRef(false);
+  const autoSubmittedRef = useRef(false);
+  const keywordsRef = useRef(keywords);
+
+  // Keep keywordsRef in sync so the timer effect can read latest keywords
+  // without adding 'keywords' to the effect dependency array.
+  useEffect(() => {
+    keywordsRef.current = keywords;
+  }, [keywords]);
 
   // The first player in the list is treated as the host.
   const isHost = Boolean(
@@ -124,9 +132,6 @@ export default function Room() {
         // room's roster (e.g. the arcade layer already registered this
         // identity, or this is a reload after a successful join),
         // don't call /join again — just adopt the existing membership.
-        // This is a safety net on top of the arcade identity bridge in
-        // arcade.ts; it also protects against any other code path that
-        // could end up calling join() with a stale or duplicate id.
         try {
           const stateRes = await fetch(`${API_BASE_URL}/${roomId}/state`);
 
@@ -195,6 +200,7 @@ export default function Room() {
         setSubmitSuccess(false);
         setShowResults(false);
         setRoundResults(null);
+        autoSubmittedRef.current = false; // reset for new round
 
         if (data.state === 'playing') {
           setPhase('countdown');
@@ -255,7 +261,8 @@ export default function Room() {
 
   // ---- Round timer ----
 
-  // Count down the 30-second round and fetch results when time expires.
+  // Count down the round and fetch results when time expires.
+  // Auto-submit any filled keywords if the user hasn't submitted manually.
   useEffect(() => {
     if (phase !== 'playing') return;
 
@@ -266,6 +273,50 @@ export default function Room() {
       );
 
       return () => clearTimeout(timer);
+    }
+
+    // Time expired
+    const alreadySubmitted =
+      roomState?.submitted_user_ids.includes(userId ?? '') ?? false;
+
+    if (
+      !alreadySubmitted &&
+      !autoSubmittedRef.current &&
+      roomId &&
+      userId
+    ) {
+      autoSubmittedRef.current = true;
+      const filled = keywordsRef.current.filter(
+        (k) => k.trim() !== '',
+      );
+
+      if (filled.length > 0) {
+        fetch(`${API_BASE_URL}/${roomId}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            keywords: filled,
+            user_id: userId,
+          }),
+        })
+          .then(() => {
+            if (
+              !roundResults ||
+              roundResults.round !== roomState?.round
+            ) {
+              fetchRoundResults();
+            }
+          })
+          .catch(() => {
+            if (
+              !roundResults ||
+              roundResults.round !== roomState?.round
+            ) {
+              fetchRoundResults();
+            }
+          });
+        return;
+      }
     }
 
     if (
@@ -279,6 +330,9 @@ export default function Room() {
     timeLeft,
     roomState?.round,
     roundResults,
+    fetchRoundResults,
+    roomId,
+    userId,
   ]);
 
   // Fetch results early if everyone has already submitted.
