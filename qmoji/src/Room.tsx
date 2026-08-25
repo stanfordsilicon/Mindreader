@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Podium from './podium';
+import { useT } from './i18n';
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ??
@@ -37,6 +38,7 @@ type RoundResults = {
 };
 
 export default function Room() {
+  const t = useT();
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
 
@@ -179,7 +181,7 @@ export default function Room() {
 
       return (
         match?.name ??
-        `Player ${id.slice(0, 6)}`
+        t('player_fallback_name', { id: id.slice(0, 6) })
       );
     },
     [roomState, userId],
@@ -296,7 +298,7 @@ export default function Room() {
 
       if (res.status === 404) {
         setError(
-          'Room no longer exists.',
+          t('error_room_gone'),
         );
         return;
       }
@@ -1007,7 +1009,7 @@ export default function Room() {
 
     if (filled.length === 0) {
       setError(
-        'Please fill out at least one keyword before submitting.',
+        t('error_keyword_required'),
       );
 
       return;
@@ -1138,9 +1140,7 @@ export default function Room() {
         }
       `}</style>
 
-      <h1 className="qmoji-title">
-        Mindreader
-      </h1>
+      <h1 className="qmoji-title">{t('app_title')}</h1>
 
       <p className="qmoji-subtitle">
         Describe the emoji with up to four
@@ -1195,7 +1195,7 @@ export default function Room() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Round results"
+          aria-label={t('round_results_heading')}
           onClick={() =>
             setShowResults(false)
           }
@@ -1264,9 +1264,7 @@ export default function Room() {
                   textAlign:
                     'center',
                 }}
-              >
-                Loading results...
-              </p>
+              >{t('loading_results')}</p>
             ) : roundResults ? (
               <>
                 {/* Answer reveal */}
@@ -1299,9 +1297,7 @@ export default function Room() {
                         fontSize:
                           '0.9rem',
                       }}
-                    >
-                      Let's see what
-                    </span>
+                    >{t('lets_see_what')}</span>
 
                     <span
                       style={{
@@ -1533,9 +1529,7 @@ export default function Room() {
                   fontSize:
                     '0.8rem',
                 }}
-              >
-                No results yet.
-              </p>
+              >{t('no_results_yet')}</p>
             )}
 
             {isHost &&
@@ -1576,9 +1570,7 @@ export default function Room() {
             fontSize:
               '0.8rem',
           }}
-        >
-          Loading room...
-        </p>
+        >{t('loading_room')}</p>
       ) : (
         <>
           {/* ====================================================
@@ -1644,9 +1636,7 @@ export default function Room() {
                   style={{
                     marginTop: 8,
                   }}
-                >
-                  Leave
-                </button>
+                >{t('leave_button')}</button>
               )}
 
               <p

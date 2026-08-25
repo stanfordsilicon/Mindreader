@@ -1,0 +1,21 @@
+{
+  "_readme": [
+    "HUMAN OVERRIDES for pt-br. Hand-maintained; always wins.",
+    "",
+    "scripts/translate.mjs READS this file and merges it on top of DeepL's output.",
+    "It never writes here. Fix a bad translation by adding the key HERE, not in",
+    "pt-br.json, which is regenerated on every run.",
+    "",
+    "Every entry was written by Claude, not a native speaker -- see",
+    "TRANSLATION_NOTES.md. Nothing here has been verified by a human.",
+    "",
+    "Keys must match public/locales/en.json. {placeholder} tokens and emoji must",
+    "match the English exactly or the generator refuses to write the locale."
+  ],
+  "player_fallback_name": "Jogador {id}",
+  "rounds_to_play_label": "Quantas rodadas você quer jogar?",
+  "leave_button": "Sair",
+  "join_button": "Entrar",
+  "session_complete_detail": "Você terminou {maxRounds} rodadas. Comece outra sessão para jogar de novo.",
+  "loading_emoji": "Carregando emoji..."
+}
