@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useT } from './i18n';
 
 type Player = {
   user_id: string;
@@ -13,6 +14,7 @@ type PodiumProps = {
 };
 
 export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
+  const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);
   const [blocksGrown, setBlocksGrown] = useState(false);
@@ -132,9 +134,7 @@ export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
       <p style={{
         fontSize: '0.85rem', marginBottom: 40, zIndex: 10,
         opacity: visible ? 0.85 : 0, transition: 'opacity 0.6s ease 0.3s',
-      }}>
-        Here are the final results!
-      </p>
+      }}>{t('final_results_heading')}</p>
 
       {/* Podium */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, marginBottom: 40, zIndex: 10 }}>
@@ -221,9 +221,7 @@ export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
           <h3 style={{
             fontFamily: 'var(--font-display)', fontSize: '0.6rem',
             textAlign: 'center', margin: '0 0 14px', opacity: 0.8,
-          }}>
-            FULL LEADERBOARD
-          </h3>
+          }}>{t('full_leaderboard_heading')}</h3>
 
           {sorted.map((p, idx) => (
             <div key={p.user_id} style={{
@@ -266,12 +264,8 @@ export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
         transform: btnsVisible ? 'translateY(0)' : 'translateY(20px)',
         transition: 'all 0.5s ease',
       }}>
-        <button className="qmoji-btn qmoji-btn-red" onClick={onLeave}>
-          Leave
-        </button>
-        <button className="qmoji-btn qmoji-btn-green" onClick={onPlayAgain}>
-          Play Again
-        </button>
+        <button className="qmoji-btn qmoji-btn-red" onClick={onLeave}>{t('leave_button')}</button>
+        <button className="qmoji-btn qmoji-btn-green" onClick={onPlayAgain}>{t('play_again_button')}</button>
       </div>
 
       <style>{`

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import Start from './Start';
 import { canStartNextRound } from './roundUtils.js';
+import { useT } from './i18n';
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_URL ??
@@ -18,6 +19,7 @@ type RoundResults = {
 };
 
 function SingleplayerGame() {
+  const t = useT();
   // ---- Game state ----
 
   const [showEmoji, setShowEmoji] = useState(false);
@@ -207,7 +209,7 @@ function SingleplayerGame() {
 
     if (filledKeywords.length === 0) {
       setError(
-        'Please fill out at least one keyword before submitting.',
+        t('error_keyword_required'),
       );
       return;
     }
@@ -250,7 +252,7 @@ function SingleplayerGame() {
           ? err.message
           : 'Failed to save to database.';
 
-      setError(`Database Error: ${message}`);
+      setError(t('error_database', { message }));
     } finally {
       setIsSubmitting(false);
     }
@@ -291,11 +293,9 @@ function SingleplayerGame() {
   return (
     <main className="qmoji-app">
       <header className="qmoji-header">
-        <h1>Mindreader</h1>
+        <h1>{t('app_title')}</h1>
 
-        <p>
-          Describe the emoji with up to four keywords in 30 seconds!
-        </p>
+        <p>{t('app_tagline')}</p>
 
         {/* Show language/round setup before the game starts. */}
         {!showEmoji && (
@@ -330,9 +330,7 @@ function SingleplayerGame() {
             fontWeight: 'bold',
             textAlign: 'center',
           }}
-        >
-          Successfully saved your keywords!
-        </p>
+        >{t('keywords_saved')}</p>
       )}
 
       {/* ---- Results modal ---- */}
@@ -341,7 +339,7 @@ function SingleplayerGame() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Round results"
+          aria-label={t('round_results_heading')}
           onClick={() => setSubmitSuccess(false)}
           style={{
             position: 'fixed',
@@ -377,7 +375,7 @@ function SingleplayerGame() {
               onClick={() =>
                 setSubmitSuccess(false)
               }
-              aria-label="Close"
+              aria-label={t('close_button')}
               style={{
                 position: 'absolute',
                 top: '12px',
@@ -406,9 +404,7 @@ function SingleplayerGame() {
             </h3>
 
             {isLoadingResults ? (
-              <p style={{ textAlign: 'center' }}>
-                Loading results...
-              </p>
+              <p style={{ textAlign: 'center' }}>{t('loading_results')}</p>
             ) : roundResults ? (
               <>
                 {/* Show this round's points and running total. */}
@@ -586,9 +582,7 @@ function SingleplayerGame() {
                 style={{
                   textAlign: 'center',
                 }}
-              >
-                No results yet.
-              </p>
+              >{t('no_results_yet')}</p>
             )}
 
             {/* Close results and start another round. */}
@@ -607,9 +601,7 @@ function SingleplayerGame() {
                 fontWeight: 500,
                 marginTop: '8px',
               }}
-            >
-              Try another emoji
-            </button>
+            >{t('try_another_emoji_button')}</button>
           </div>
         </div>
       )}
@@ -628,9 +620,7 @@ function SingleplayerGame() {
         >
           {gameComplete ? (
             <>
-              <h2 style={{ margin: 0 }}>
-                Session complete
-              </h2>
+              <h2 style={{ margin: 0 }}>{t('session_complete')}</h2>
 
               <p style={{ margin: 0 }}>
                 You finished {maxRounds} rounds.
@@ -675,13 +665,13 @@ function SingleplayerGame() {
               }}
             >
               {timeLeft > 0
-                ? `Time remaining: ${timeLeft}s`
+                ? t('time_remaining', { timeLeft })
                 : "Time's up!"}
             </div>
 
             <div
               className="emoji-display"
-              aria-label="Random emoji"
+              aria-label={t('random_emoji_button')}
             >
               <span
                 className="emoji"

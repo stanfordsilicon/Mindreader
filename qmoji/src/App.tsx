@@ -5,6 +5,7 @@ import Multiplayerlobby from './Multiplayerlobby';
 import Room from './Room';
 import { initArcade, backToHomescreenUrl } from './arcade';
 import './App.css';
+import { useT } from './i18n';
 
 // Where the game's backend lives - falls back to localhost for local dev
 const BACKEND_URL = (import.meta.env.VITE_API_URL ?? 'http://localhost:8000').replace(/\/$/, '');
@@ -95,6 +96,7 @@ function useArcadeAutoJoin() {
 // like the same continuous arcade as entering one, instead of an instant
 // jump cut -- see App.css's .arcade-loading-screen for the shared styling.
 function useLaunchpadTransition() {
+  const t = useT();
   // Whether the loading overlay should currently be shown
   const [isLeaving, setIsLeaving] = useState(false);
   // Current width of the progress bar fill, animated from 0% to 100%
@@ -114,8 +116,7 @@ function useLaunchpadTransition() {
   // The loading overlay itself - only visible while isLeaving is true
   const overlay = (
     <div className={`arcade-loading-screen${isLeaving ? ' is-visible' : ''}`} aria-hidden={!isLeaving}>
-      <p className="arcade-loading-text">
-        LOADING<span className="arcade-loading-dots">...</span>
+      <p className="arcade-loading-text">{t('loading')}<span className="arcade-loading-dots">...</span>
       </p>
       <div className="arcade-loading-bar">
         <div className="arcade-loading-bar-fill" style={{ width: fillWidth }} />
@@ -127,6 +128,7 @@ function useLaunchpadTransition() {
 }
 
 export default function App() {
+  const t = useT();
   // Handles silently joining an arcade room on load, if applicable
   const arcadeBackParams = useArcadeAutoJoin();
   // Handles the loading-screen transition when leaving back to the launchpad
@@ -141,7 +143,7 @@ export default function App() {
       <button
         type="button"
         className="back-to-launchpad"
-        title="Return to launch pad"
+        title={t('return_to_launch_pad_tooltip')}
         onClick={() => {
           navigateToLaunchpad(
             backToHomescreenUrl(arcadeBackParams.roomCode, arcadeBackParams.lang, arcadeBackParams.playerId)
