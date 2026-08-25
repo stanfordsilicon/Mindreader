@@ -1,0 +1,12 @@
+{
+  "_readme": [
+    "HUMAN OVERRIDES for fr. Hand-maintained; always wins.",
+    "",
+    "scripts/translate.mjs READS this file and merges it on top of DeepL's output.",
+    "It never writes here. Fix a bad translation by adding the key HERE, not in",
+    "fr.json, which is regenerated on every run.",
+    "",
+    "Keys must match public/locales/en.json. {placeholder} tokens and emoji must",
+    "match the English exactly or the generator refuses to write the locale."
+  ]
+}
