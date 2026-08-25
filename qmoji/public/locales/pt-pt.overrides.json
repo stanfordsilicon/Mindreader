@@ -6,7 +6,25 @@
     "It never writes here. Fix a bad translation by adding the key HERE, not in",
     "pt-pt.json, which is regenerated on every run.",
     "",
+    "Every entry was written by Claude, not a native speaker -- see",
+    "TRANSLATION_NOTES.md. Nothing here has been verified by a human.",
+    "",
     "Keys must match public/locales/en.json. {placeholder} tokens and emoji must",
     "match the English exactly or the generator refuses to write the locale."
-  ]
+  ],
+  "player_fallback_name": "Jogador {id}",
+  "rounds_to_play_label": "Quantas rondas queres jogar?",
+  "keyword_language_label": "Em que idioma queres as palavras-chave?",
+  "leave_button": "Sair",
+  "join_button": "Entrar",
+  "choose_username_label": "Escolhe um nome de utilizador",
+  "name_placeholder": "Introduz o teu nome",
+  "username_placeholder": "introduz o teu nome de utilizador",
+  "error_enter_name": "Introduz um nome.",
+  "error_username_before_room": "Introduz um nome de utilizador antes de criar uma sala.",
+  "error_enter_username": "Introduz um nome de utilizador.",
+  "error_valid_room_id": "Introduz um ID de sala válido.",
+  "error_keyword_required": "Preenche pelo menos uma palavra-chave antes de enviar.",
+  "session_complete_detail": "Terminaste {maxRounds} rondas. Começa outra sessão para jogares de novo.",
+  "loading_emoji": "A carregar emoji..."
 }

@@ -68,7 +68,7 @@ function Start({
         >
           {ROUND_OPTIONS.map((n) => (
             <option key={n} value={n}>
-              {n} rounds
+              {t('rounds_option', { n })}
             </option>
           ))}
         </select>

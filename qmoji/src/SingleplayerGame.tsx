@@ -622,11 +622,7 @@ function SingleplayerGame() {
             <>
               <h2 style={{ margin: 0 }}>{t('session_complete')}</h2>
 
-              <p style={{ margin: 0 }}>
-                You finished {maxRounds} rounds.
-                Start another session to play
-                again.
-              </p>
+              <p style={{ margin: 0 }}>{t('session_complete_detail', { maxRounds })}</p>
             </>
           ) : (
             <button
@@ -635,9 +631,7 @@ function SingleplayerGame() {
               onClick={handleRevealEmoji}
               disabled={isLoading}
             >
-              {isLoading
-                ? 'Loading emoji...'
-                : 'Show me an emoji!'}
+              {isLoading ? t('loading_emoji') : t('show_emoji_button')}
             </button>
           )}
         </section>

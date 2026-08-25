@@ -48,5 +48,9 @@
   "leave_button": "Leave",
   "final_results_heading": "Here are the final results!",
   "full_leaderboard_heading": "FULL LEADERBOARD",
-  "play_again_button": "Play Again"
+  "play_again_button": "Play Again",
+  "rounds_option": "{n} rounds",
+  "session_complete_detail": "You finished {maxRounds} rounds. Start another session to play again.",
+  "loading_emoji": "Loading emoji...",
+  "show_emoji_button": "Show me an emoji!"
 }
