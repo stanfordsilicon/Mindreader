@@ -23,10 +23,13 @@ export interface ArcadeRoom {
   createdAt?: string;
 }
 
+import { normalizeLang } from "./i18n";
+
 export interface ArcadeParams {
   room: string | null;
   lang: string | null;
   player: string | null;
+  uiLang: string | null;
 }
 
 export interface ArcadeInit {
@@ -34,6 +37,7 @@ export interface ArcadeInit {
   roomCode: string;
   lang: string;
   playerId: string | null;
+  uiLang: string | null;
 }
 
 export class ArcadeError extends Error {
@@ -188,7 +192,18 @@ export function createPoller(code: string, onUpdate: (room: ArcadeRoom) => void,
 
 export function readParams(): ArcadeParams {
   const params = new URLSearchParams(location.search);
-  return { room: params.get("room"), lang: params.get("lang"), player: params.get("player") };
+  // uiLang was missing here. This file is a TypeScript port of the vanilla
+  // arcade-client.js taken BEFORE uiLang existed, so the homescreen has been
+  // sending the interface-language choice all along and this game dropped it
+  // on the floor -- it never reached localStorage either, so it did not
+  // survive to a later visit. `lang` (the gameplay/keyword language) and
+  // `uiLang` (the interface language) are separate axes and must never merge.
+  return {
+    room: params.get("room"),
+    lang: params.get("lang"),
+    player: params.get("player"),
+    uiLang: params.get("uiLang"),
+  };
 }
 
 // Called once on load by every game. Returns null (never throws) when
@@ -234,11 +249,22 @@ export async function initArcade(): Promise<ArcadeInit | null> {
     document.documentElement.lang = params.lang;
   }
 
+  let normalizedUiLang: string | null = null;
+  if (params.uiLang) {
+    // Normalized before storing, never stored raw -- matching
+    // arcade-client.js. A hand-typed "?uiLang=PT-BR" would otherwise poison
+    // localStorage with a value every later lookup misses, and uiLang builds
+    // a locale FILENAME, which is case-sensitive on Vercel but not on macOS.
+    normalizedUiLang = normalizeLang(params.uiLang);
+    try { localStorage.setItem("qmoji.uiLang", normalizedUiLang); } catch { /* storage unavailable */ }
+  }
+
   return {
     room,
     roomCode: params.room,
     lang: params.lang || room.language,
     playerId: resolvedPlayerId ?? null,
+    uiLang: normalizedUiLang,
   };
 }
 
