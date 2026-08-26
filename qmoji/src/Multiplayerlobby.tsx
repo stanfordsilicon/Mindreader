@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useT } from './i18n';
 import {
   readParams,
   initArcade,
@@ -9,6 +10,7 @@ import {
 } from './arcade'; // adjust path if your arcade client lives elsewhere
 
 export const Multiplayerlobby: React.FC = () => {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -76,7 +78,7 @@ export const Multiplayerlobby: React.FC = () => {
   // ---- Arcade: enter the room ----
   const handleArcadeEnter = async () => {
     if (!arcadeRoom || !username.trim()) {
-      setError('Please enter a name.');
+      setError(t('error_enter_name'));
       return;
     }
     setIsLoading(true);
@@ -108,7 +110,7 @@ export const Multiplayerlobby: React.FC = () => {
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
-      setError('Please enter a username before creating a room.');
+      setError(t('error_username_before_room'));
       return;
     }
     setIsLoading(true);
@@ -133,11 +135,11 @@ export const Multiplayerlobby: React.FC = () => {
   const handleJoinRoom = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
-      setError('Please enter a username.');
+      setError(t('error_enter_username'));
       return;
     }
     if (!joinRoomId.trim()) {
-      setError('Please enter a valid Room ID.');
+      setError(t('error_valid_room_id'));
       return;
     }
     const formattedRoomId = joinRoomId.trim().toUpperCase();
@@ -181,14 +183,14 @@ export const Multiplayerlobby: React.FC = () => {
                 arcadePlayerId
               );
             }}
-            aria-label="Back to Arcade"
+            aria-label={t('back_to_arcade_button')}
           >
             ↩
           </button>
         </div>
 
-        <h1 className="qmoji-title">Mindreader</h1>
-        <p className="qmoji-subtitle">Arcade Room Connected</p>
+        <h1 className="qmoji-title">{t('app_title')}</h1>
+        <p className="qmoji-subtitle">{t('arcade_room_connected')}</p>
 
         {error && (
           <div
@@ -217,9 +219,7 @@ export const Multiplayerlobby: React.FC = () => {
               marginBottom: 6,
               letterSpacing: 1,
             }}
-          >
-            ROOM CODE
-          </div>
+          >{t('room_code_label')}</div>
           <div
             style={{
               fontFamily: 'var(--font-display)',
@@ -242,11 +242,11 @@ export const Multiplayerlobby: React.FC = () => {
             }}
           >
             <span>
-              <span style={{ opacity: 0.6 }}>Language: </span>
+              <span style={{ opacity: 0.6 }}>{t('language_label')}</span>
               {arcadeLang.toUpperCase()}
             </span>
             <span>
-              <span style={{ opacity: 0.6 }}>Players: </span>
+              <span style={{ opacity: 0.6 }}>{t('players_label')}</span>
               {arcadeRoom.players.length}
             </span>
           </div>
@@ -264,13 +264,13 @@ export const Multiplayerlobby: React.FC = () => {
         </div>
 
         <div className="qmoji-field">
-          <label>Your Name</label>
+          <label>{t('your_name_label')}</label>
           <input
             type="text"
             className="qmoji-input"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your name"
+            placeholder={t('name_placeholder')}
             disabled={isLoading}
           />
         </div>
@@ -285,15 +285,13 @@ export const Multiplayerlobby: React.FC = () => {
                 arcadePlayerId
               );
             }}
-          >
-            Back to Arcade
-          </button>
+          >{t('back_to_arcade_button')}</button>
           <button
             className="qmoji-btn qmoji-btn-green"
             onClick={handleArcadeEnter}
             disabled={isLoading}
           >
-            {isLoading ? 'Entering…' : 'Enter Game'}
+            {isLoading ? t('entering_button') : t('enter_game_button')}
           </button>
         </div>
 
@@ -311,16 +309,14 @@ export const Multiplayerlobby: React.FC = () => {
         <button
           className="qmoji-icon-btn"
           onClick={() => navigate(-1)}
-          aria-label="Back"
+          aria-label={t('back_button')}
         >
           ↩
         </button>
       </div>
 
-      <h1 className="qmoji-title">Mindreader</h1>
-      <p className="qmoji-subtitle">
-        Describe the emoji with up to four keywords in 30 seconds!
-      </p>
+      <h1 className="qmoji-title">{t('app_title')}</h1>
+      <p className="qmoji-subtitle">{t('app_tagline')}</p>
 
       {error && (
         <div
@@ -338,13 +334,13 @@ export const Multiplayerlobby: React.FC = () => {
       )}
 
       <div className="qmoji-field">
-        <label>Choose username</label>
+        <label>{t('choose_username_label')}</label>
         <input
           type="text"
           className="qmoji-input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="enter username"
+          placeholder={t('username_placeholder')}
           disabled={isLoading}
         />
       </div>
@@ -358,25 +354,25 @@ export const Multiplayerlobby: React.FC = () => {
         }}
       >
         <div className="qmoji-panel-yellow">
-          <h3>Create Room</h3>
+          <h3>{t('create_room_button')}</h3>
           <button
             className="qmoji-btn qmoji-btn-green"
             onClick={handleCreateRoom}
             disabled={isLoading}
           >
-            {isLoading ? 'Creating...' : 'Create'}
+            {isLoading ? t('creating_button') : t('create_button')}
           </button>
         </div>
 
         <div className="qmoji-panel-yellow">
-          <h3>Join Room</h3>
+          <h3>{t('join_room_button')}</h3>
           <form onSubmit={handleJoinRoom}>
             <input
               type="text"
               className="qmoji-input"
               value={joinRoomId}
               onChange={(e) => setJoinRoomId(e.target.value.toUpperCase())}
-              placeholder="XXXX"
+              placeholder={t('room_code_placeholder')}
               maxLength={4}
               disabled={isLoading}
               style={{
@@ -391,7 +387,7 @@ export const Multiplayerlobby: React.FC = () => {
               className="qmoji-btn qmoji-btn-green"
               disabled={isLoading}
             >
-              {isLoading ? 'Joining...' : 'Join'}
+              {isLoading ? t('joining_button') : t('join_button')}
             </button>
           </form>
         </div>
