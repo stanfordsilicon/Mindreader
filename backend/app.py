@@ -491,9 +491,11 @@ def restart_game(room_id):
     if not game:
         return flask.jsonify({"error": "Room not found"}), 404
 
-    game["round"] = 0
-    game["state"] = "waiting"
-    game["current_emoji"] = random.choice(emoji_list) if emoji_list else None
+    pool = get_emoji_pool(game["language"])
+
+    game["round"] = 1
+    game["state"] = "playing"
+    game["current_emoji"] = random.choice(pool) if pool else None
     game["submissions"] = {}
     game["scores"] = {p["user_id"]: 0 for p in game["players"]}
 
@@ -511,8 +513,7 @@ def restart_game(room_id):
             {"$set": {"score": 0}},
         )
 
-    return flask.jsonify({"message": "Game restarted", "emoji": game["current_emoji"]})
-
+    return flask.jsonify({"message": "Game restarted", "emoji": game["current_emoji"], "round": game["round"]})
 
 
 if __name__ == "__main__":

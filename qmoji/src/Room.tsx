@@ -2020,6 +2020,7 @@ export default function Room() {
               onLeave={
                 handleLeave
               }
+              isRestarting={isSubmitting}
             />
           )}
         </>

@@ -12,8 +12,14 @@ type PodiumProps = {
   onPlayAgain: () => void;
   onLeave: () => void;
 };
+type PodiumProps = {
+  players: Player[];
+  onPlayAgain: () => void;
+  onLeave: () => void;
+  isRestarting?: boolean;
+};
 
-export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
+export default function Podium({ players, onPlayAgain, onLeave, isRestarting = false }: PodiumProps) {
   const t = useT();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(false);
@@ -265,7 +271,13 @@ export default function Podium({ players, onPlayAgain, onLeave }: PodiumProps) {
         transition: 'all 0.5s ease',
       }}>
         <button className="qmoji-btn qmoji-btn-red" onClick={onLeave}>{t('leave_button')}</button>
-        <button className="qmoji-btn qmoji-btn-green" onClick={onPlayAgain}>{t('play_again_button')}</button>
+        <button
+          className="qmoji-btn qmoji-btn-green"
+          onClick={onPlayAgain}
+          disabled={isRestarting}
+        >
+          {isRestarting ? 'Restarting...' : t('play_again_button')}
+        </button>
       </div>
 
       <style>{`
