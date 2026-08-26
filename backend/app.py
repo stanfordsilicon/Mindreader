@@ -9,6 +9,9 @@ from collections import Counter
 import time
 import uuid
 import os
+import json
+import urllib.request
+import urllib.parse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -67,16 +70,80 @@ def load_emojis(path=None):
 
 
 emoji_list = load_emojis()
+emoji_list_set = set(emoji_list)
+
+# --- Per-language emoji pool, from qmoji-2's Phase system ---
+#
+# qmoji-2's admin panel curates *which* emoji a Game Language may play with
+# (see qmoji/server/data/EmojiPhaseRepository.js) -- not new emoji data of
+# its own, just a restriction on this file's existing emoji_list.txt. This
+# process stays up between requests (unlike Blaster's serverless functions),
+# so a plain module-level dict is enough of a cache; no Redis needed here.
+QMOJI_ADMIN_BASE_URL = os.environ.get("QMOJI_ADMIN_BASE_URL", "http://localhost:5500")
+_EMOJI_POOL_FRESH_TTL_S = 60
+_EMOJI_POOL_FETCH_TIMEOUT_S = 3
+_emoji_pool_cache = {}  # language -> {"fetched_at": ts, "pool": [...]}
+
+
+def _fetch_curated_emojis(language):
+    """Returns a restricted emoji list for `language`, or None if nothing's
+    curated for it yet (or qmoji-2 couldn't be reached) -- never raises."""
+    url = "{}/api/emoji-rules?lang={}".format(
+        QMOJI_ADMIN_BASE_URL, urllib.parse.quote(language)
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=_EMOJI_POOL_FETCH_TIMEOUT_S) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return None
+
+    if not data.get("ok") or not isinstance(data.get("emojis"), list):
+        return None
+
+    # Only emoji this app actually has (i.e. that exist in emoji_list.txt) --
+    # the Phase system restricts which emoji are allowed, it doesn't add new
+    # ones this app knows nothing about.
+    usable = [e for e in data["emojis"] if e in emoji_list_set]
+    return usable or None
+
+
+def get_emoji_pool(language):
+    """Returns the emoji list a round for `language` should draw from: the
+    curated Phase set if one exists and overlaps with emoji_list.txt,
+    otherwise the full static list -- same fallback shape as Blaster's
+    lib/emoji-source.js."""
+    language = language or "en"
+    now = time.time()
+    cached = _emoji_pool_cache.get(language)
+    if cached and now - cached["fetched_at"] < _EMOJI_POOL_FRESH_TTL_S:
+        return cached["pool"]
+
+    fetched = _fetch_curated_emojis(language)
+    if fetched:
+        _emoji_pool_cache[language] = {"fetched_at": now, "pool": fetched}
+        return fetched
+
+    # Nothing curated (or fetch failed) -- reuse a still-recent cache entry
+    # rather than falling all the way back, same reasoning as Blaster's
+    # emoji-source.js. Only fall back to the full static list once there's
+    # nothing usable cached at all.
+    if cached:
+        return cached["pool"]
+
+    _emoji_pool_cache[language] = {"fetched_at": now, "pool": emoji_list}
+    return emoji_list
+
 
 games = {}  # dict to store different ongoing games, more useful for multiplayer games. In-memory, since a round in progress doesn't need to survive a restart.
 
 
 def new_game(language="en"):
+    pool = get_emoji_pool(language)
     return {
         "state": "waiting",
         "round": 0,
         "language": language,
-        "current_emoji": random.choice(emoji_list) if emoji_list else None,
+        "current_emoji": random.choice(pool) if pool else None,
         "players": [],
         "scores": {},
         "submissions": {},
@@ -312,7 +379,7 @@ def start_round(room_id):
         game["state"] = "ended"
         return flask.jsonify({"error": "Max rounds reached", "round": game["round"], "state": "ended"}), 400
 
-    game["current_emoji"] = random.choice(emoji_list)
+    game["current_emoji"] = random.choice(get_emoji_pool(game["language"]))
     game["submissions"] = {}
     game["round"] += 1
     game["state"] = "playing"
