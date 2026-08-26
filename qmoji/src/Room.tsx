@@ -459,6 +459,41 @@ export default function Room() {
       }
     }, [roomId]);
 
+  const handlePlayAgain = useCallback(async () => {
+  if (!roomId) return;
+
+  setError('');
+  setIsSubmitting(true);
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/${roomId}/restart`, {
+      method: 'POST',
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to restart game.');
+    }
+
+    // Reset all local round/result state so it doesn't
+    // think we're still on the old, ended game.
+    lastRoundRef.current = 0;
+    autoSubmittedRoundRef.current = null;
+    setKeywords(['', '', '', '']);
+    setSubmitSuccess(false);
+    setShowResults(false);
+    setRoundResults(null);
+    setPhase('waiting');
+    setTimeLeft(ROUND_SECONDS);
+
+    await fetchState();
+  } catch (err: any) {
+    setError(err.message || 'Error restarting game.');
+  } finally {
+    setIsSubmitting(false);
+  }
+}, [roomId, fetchState]);
+
   // ============================================================
   // Keyword submission
   //
@@ -1980,7 +2015,7 @@ export default function Room() {
                 sortedScoreboard
               }
               onPlayAgain={
-                handleStartRound
+                handlePlayAgain
               }
               onLeave={
                 handleLeave
