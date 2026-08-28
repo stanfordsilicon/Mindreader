@@ -11,7 +11,7 @@ const API_BASE_URL = (
 const POLL_INTERVAL_MS = 2000;
 const ROUND_SECONDS = 15;
 const COUNTDOWN_START = 3;
-const AUTO_START_DELAY_MS = 24000;
+const AUTO_START_DELAY_MS = 28000;
 
 type Player = {
   user_id: string;
