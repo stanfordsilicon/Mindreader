@@ -171,7 +171,7 @@ export default function Room() {
   const getPlayerName = useCallback(
     (id: string) => {
       if (id === userId) {
-        return 'You';
+        return t('player_you');
       }
 
       const match =
@@ -184,7 +184,7 @@ export default function Room() {
         t('player_fallback_name', { id: id.slice(0, 6) })
       );
     },
-    [roomState, userId],
+    [roomState, userId, t],
   );
 
   // ============================================================
@@ -261,7 +261,7 @@ export default function Room() {
 
           throw new Error(
             data.error ||
-              'Failed to join room.',
+              t('error_join_room'),
           );
         }
 
@@ -269,7 +269,7 @@ export default function Room() {
       } catch (err: any) {
         setError(
           err.message ||
-            'Error joining the room.',
+            t('error_join_room'),
         );
 
         hasJoinedRef.current = false;
@@ -282,6 +282,7 @@ export default function Room() {
     userId,
     username,
     hasJoined,
+    t,
   ]);
 
   // ============================================================
@@ -305,7 +306,7 @@ export default function Room() {
 
       if (!res.ok) {
         throw new Error(
-          'Error fetching room state.',
+          t('error_fetch_state'),
         );
       }
 
@@ -353,10 +354,10 @@ export default function Room() {
     } catch (err: any) {
       setError(
         err.message ||
-          'Error updating room state.',
+          t('error_update_state'),
       );
     }
-  }, [roomId]);
+  }, [roomId, t]);
 
   useEffect(() => {
     if (!hasJoined) return;
@@ -439,7 +440,7 @@ export default function Room() {
 
         if (!res.ok) {
           throw new Error(
-            'Could not load round results.',
+            t('error_load_results'),
           );
         }
 
@@ -452,12 +453,12 @@ export default function Room() {
       } catch (err: any) {
         setError(
           err.message ||
-            'Failed to load round results.',
+            t('error_load_results'),
         );
       } finally {
         setIsLoadingResults(false);
       }
-    }, [roomId]);
+    }, [roomId, t]);
 
   const handlePlayAgain = useCallback(async () => {
   if (!roomId) return;
@@ -472,7 +473,7 @@ export default function Room() {
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.error || 'Failed to restart game.');
+      throw new Error(data.error || t('error_restart_game'));
     }
 
     // Reset all local round/result state so it doesn't
@@ -488,11 +489,11 @@ export default function Room() {
 
     await fetchState();
   } catch (err: any) {
-    setError(err.message || 'Error restarting game.');
+    setError(err.message || t('error_restart_game'));
   } finally {
     setIsSubmitting(false);
   }
-}, [roomId, fetchState]);
+}, [roomId, fetchState, t]);
 
   // ============================================================
   // Keyword submission
@@ -579,7 +580,7 @@ export default function Room() {
 
             throw new Error(
               data.error ||
-                'Failed to submit keywords.',
+                t('error_submit_keywords'),
             );
           }
 
@@ -610,7 +611,7 @@ export default function Room() {
 
           setError(
             err.message ||
-              'Error submitting keywords.',
+              t('error_submit_keywords'),
           );
         } finally {
           setIsSubmitting(false);
@@ -623,6 +624,7 @@ export default function Room() {
         roomState?.round,
         fetchState,
         fetchRoundResults,
+        t,
       ],
     );
 
@@ -989,7 +991,7 @@ export default function Room() {
 
           throw new Error(
             data.error ||
-              'Failed to fetch new emoji.',
+              t('error_fetch_emoji'),
           );
         }
 
@@ -997,7 +999,7 @@ export default function Room() {
       } catch (err: any) {
         setError(
           err.message ||
-            'Error fetching new emoji.',
+            t('error_fetch_emoji'),
         );
       } finally {
         setIsSubmitting(false);
@@ -1005,6 +1007,7 @@ export default function Room() {
     }, [
       roomId,
       fetchState,
+      t,
     ]);
 
   // ============================================================
@@ -1357,7 +1360,7 @@ export default function Room() {
                           '0.9rem',
                       }}
                     >
-                      answered...
+                      {t('answered_suffix')}
                     </span>
                   </div>
 
@@ -1407,7 +1410,7 @@ export default function Room() {
                           key={`empty-${i}`}
                           className="qmoji-answer-card empty"
                         >
-                          ?
+                          {t('empty_answer_placeholder')}
                         </div>
                       ),
                     )}
@@ -1459,7 +1462,7 @@ export default function Room() {
                           </span>
 
                           <span>
-                            +{score}
+                            {t('round_score_format', { score })}
                           </span>
                         </div>
                       ),
@@ -1502,12 +1505,11 @@ export default function Room() {
                               '2px 0',
                           }}
                         >
-                          {index +
-                            1}.{' '}
-                          {getPlayerName(
-                            id,
-                          )}
-                          : {total}
+                          {t('total_score_format', {
+                            rank: index + 1,
+                            name: getPlayerName(id),
+                            total,
+                          })}
                         </p>
                       ),
                     )}
@@ -1526,11 +1528,9 @@ export default function Room() {
                           12,
                       }}
                     >
-                      Next round in{' '}
-                      {
-                        nextRoundCountdown
-                      }
-                      s...
+                      {t('next_round_countdown', {
+                        seconds: nextRoundCountdown,
+                      })}
                     </p>
                   )}
 
@@ -1580,7 +1580,7 @@ export default function Room() {
                 >
                   {isSubmitting
                     ? t('loading')
-                    : 'Next round'}
+                    : t('next_round_button')}
                 </button>
               )}
           </div>
@@ -1610,8 +1610,7 @@ export default function Room() {
             'waiting' && (
             <div className="qmoji-panel-yellow">
               <h3>
-                Waiting for all
-                players...
+                {t('waiting_room_heading')}
               </h3>
 
               <div className="qmoji-pill-row">
@@ -1632,7 +1631,7 @@ export default function Room() {
 
                       {p.user_id ===
                       userId
-                        ? ' (you)'
+                        ? t('you_suffix')
                         : ''}
                     </span>
                   ),
@@ -1653,8 +1652,8 @@ export default function Room() {
                   }}
                 >
                   {isSubmitting
-                    ? 'Starting...'
-                    : 'Start'}
+                    ? t('starting_button')
+                    : t('start_button')}
                 </button>
               ) : (
                 <button
@@ -1814,8 +1813,8 @@ export default function Room() {
                     >
                       {timeLeft >
                       0
-                        ? `${timeLeft}s`
-                        : "Time's up!"}
+                        ? t('timer_seconds_format', { timeLeft })
+                        : t('timer_times_up')}
                     </div>
                   </div>
 
@@ -1833,15 +1832,10 @@ export default function Room() {
                         14,
                     }}
                   >
-                    {
-                      roomState.submitted_count
-                    }{' '}
-                    /{' '}
-                    {
-                      roomState.total_players
-                    }{' '}
-                    players have
-                    submitted
+                    {t('players_submitted_status', {
+                      submitted: roomState.submitted_count,
+                      total: roomState.total_players,
+                    })}
                   </p>
 
                   {/* =================================================
@@ -1885,10 +1879,7 @@ export default function Room() {
                               value={
                                 kw
                               }
-                              placeholder={`Keyword ${
-                                i +
-                                1
-                              }`}
+                              placeholder={t('keyword_placeholder', { n: i + 1 })}
                               onChange={(
                                 e,
                               ) =>
@@ -1919,8 +1910,8 @@ export default function Room() {
                         }
                       >
                         {isSubmitting
-                          ? 'Saving...'
-                          : 'Enter word'}
+                          ? t('saving_button')
+                          : t('submit_keywords_button')}
                       </button>
                     </form>
                   ) : (
@@ -1936,10 +1927,7 @@ export default function Room() {
                           0.8,
                       }}
                     >
-                      Waiting for
-                      other players
-                      or timer
-                      expiration...
+                      {t('waiting_for_others')}
                     </p>
                   )}
                 </>
@@ -1983,7 +1971,7 @@ export default function Room() {
 
                           {p.user_id ===
                           userId
-                            ? ' (you)'
+                            ? t('you_suffix')
                             : ''}
                         </span>
 
@@ -2021,7 +2009,7 @@ export default function Room() {
       )}
 
       <p className="qmoji-footer">
-        Powered by SILICON @ Stanford
+        {t('footer_credit')}
       </p>
     </div>
   );

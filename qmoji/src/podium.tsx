@@ -129,7 +129,7 @@ export default function Podium({ players, onPlayAgain, onLeave, isRestarting = f
         transition: 'all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)',
         textShadow: '0 4px 12px rgba(0,0,0,0.4)',
       }}>
-        🏆 GAME OVER 🏆
+        {t('game_over_heading')}
       </h1>
 
       <p style={{
@@ -177,7 +177,7 @@ export default function Podium({ players, onPlayAgain, onLeave, isRestarting = f
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               color: r.color,
             }}>
-              {r.player?.name ?? '—'}
+              {r.player?.name ?? t('missing_player_placeholder')}
             </div>
 
             <div style={{
@@ -243,7 +243,7 @@ export default function Podium({ players, onPlayAgain, onLeave, isRestarting = f
                   color: idx === 0 ? '#ffd700' : idx === 1 ? '#c0c0c0' : idx === 2 ? '#cd7f32' : 'rgba(255,255,255,0.5)',
                   minWidth: 28,
                 }}>
-                  #{idx + 1}
+                  {t('leaderboard_rank_format', { rank: idx + 1 })}
                 </span>
                 {p.name}
               </span>
