@@ -1177,10 +1177,7 @@ export default function Room() {
 
       <h1 className="qmoji-title">{t('app_title')}</h1>
 
-      <p className="qmoji-subtitle">
-        Describe the emoji with up to four
-        keywords!
-      </p>
+      <p className="qmoji-subtitle">{t('app_tagline')}</p>
 
       {error && (
         <div
@@ -1217,8 +1214,7 @@ export default function Room() {
                 '0.8rem',
             }}
           >
-            Successfully saved your
-            keywords!
+            {t('keywords_saved')}
           </p>
         )}
 
@@ -1274,9 +1270,8 @@ export default function Room() {
                   '8px',
               }}
             >
-              Round{' '}
-              {roundResults?.round}{' '}
-              Results
+              {t('round_results_heading')}{' '}
+              {roundResults?.round}
             </h3>
 
             <div
@@ -1551,8 +1546,7 @@ export default function Room() {
                         'var(--qmoji-ink)',
                     }}
                   >
-                    🏆 Game Over –
-                    Final Scores
+                    🏆 {t('final_results_heading')}
                   </p>
                 )}
               </>
@@ -1585,7 +1579,7 @@ export default function Room() {
                   }}
                 >
                   {isSubmitting
-                    ? 'Loading...'
+                    ? t('loading')
                     : 'Next round'}
                 </button>
               )}
