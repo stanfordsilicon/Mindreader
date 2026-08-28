@@ -11,11 +11,6 @@ type PodiumProps = {
   players: Player[];
   onPlayAgain: () => void;
   onLeave: () => void;
-};
-type PodiumProps = {
-  players: Player[];
-  onPlayAgain: () => void;
-  onLeave: () => void;
   isRestarting?: boolean;
 };
 
@@ -276,7 +271,7 @@ export default function Podium({ players, onPlayAgain, onLeave, isRestarting = f
           onClick={onPlayAgain}
           disabled={isRestarting}
         >
-          {isRestarting ? 'Restarting...' : t('play_again_button')}
+          {isRestarting ? t('loading') : t('play_again_button')}
         </button>
       </div>
 
