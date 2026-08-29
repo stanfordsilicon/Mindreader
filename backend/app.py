@@ -79,7 +79,17 @@ emoji_list_set = set(emoji_list)
 # its own, just a restriction on this file's existing emoji_list.txt. This
 # process stays up between requests (unlike Blaster's serverless functions),
 # so a plain module-level dict is enough of a cache; no Redis needed here.
-QMOJI_ADMIN_BASE_URL = os.environ.get("QMOJI_ADMIN_BASE_URL", "http://localhost:5500")
+#
+# Defaults to real production qmoji-2 rather than localhost -- this process
+# is a production deployment (Render) far more often than a local dev
+# instance with QMOJI_ADMIN_BASE_URL unset. Verified live: with the old
+# localhost default, the deployed backend's fetch to localhost:5500 fails
+# every time (nothing listens there), silently falling back to the full
+# unfiltered emoji_list -- 12 of 15 sampled /create_room calls returned
+# emoji outside the real curated Phase-1 set. Local dev that wants its own
+# local qmoji-2 still just sets QMOJI_ADMIN_BASE_URL=http://localhost:5500
+# to override this.
+QMOJI_ADMIN_BASE_URL = os.environ.get("QMOJI_ADMIN_BASE_URL", "https://qmoji.org")
 _EMOJI_POOL_FRESH_TTL_S = 60
 _EMOJI_POOL_FETCH_TIMEOUT_S = 3
 _emoji_pool_cache = {}  # language -> {"fetched_at": ts, "pool": [...]}
