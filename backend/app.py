@@ -103,6 +103,15 @@ _emoji_pool_cache = {}  # language -> {"fetched_at": ts, "pool": [...]}
 
 _EMOJI_RULES_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
+# Diagnostic-only: the blanket `except Exception: return None` below means a
+# real failure (wrong URL, cert error, network block, bad response shape)
+# and a legitimate "nothing curated yet" both look identical from outside
+# this process. Recorded here so /debug/emoji-pool can report the *actual*
+# last outcome instead of everyone having to guess from symptoms two layers
+# removed from the real cause -- which is exactly what happened working out
+# the QMOJI_ADMIN_BASE_URL and SSL-context bugs.
+_last_fetch_attempt = {"at": None, "url": None, "outcome": None, "detail": None}
+
 
 def _fetch_curated_emojis(language):
     """Returns a restricted emoji list for `language`, or None if nothing's
@@ -110,6 +119,7 @@ def _fetch_curated_emojis(language):
     url = "{}/api/emoji-rules?lang={}".format(
         QMOJI_ADMIN_BASE_URL, urllib.parse.quote(language)
     )
+    _last_fetch_attempt.update(at=time.time(), url=url, outcome=None, detail=None)
     try:
         # Same fix this file already applies to its Mongo connections
         # (tlsCAFile=certifi.where()) -- without an explicit CA bundle,
@@ -127,16 +137,19 @@ def _fetch_curated_emojis(language):
             url, timeout=_EMOJI_POOL_FETCH_TIMEOUT_S, context=_EMOJI_RULES_SSL_CONTEXT
         ) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-    except Exception:
+    except Exception as e:
+        _last_fetch_attempt.update(outcome="exception", detail="{}: {}".format(type(e).__name__, e))
         return None
 
     if not data.get("ok") or not isinstance(data.get("emojis"), list):
+        _last_fetch_attempt.update(outcome="bad_response", detail=data)
         return None
 
     # Only emoji this app actually has (i.e. that exist in emoji_list.txt) --
     # the Phase system restricts which emoji are allowed, it doesn't add new
     # ones this app knows nothing about.
     usable = [e for e in data["emojis"] if e in emoji_list_set]
+    _last_fetch_attempt.update(outcome="ok", detail="{} curated, {} usable".format(len(data["emojis"]), len(usable)))
     return usable or None
 
 
@@ -321,6 +334,22 @@ def create_room():
 def sendEmoji():
     rand = random.choice(emoji_list)
     return flask.jsonify({"message": rand})
+
+# Diagnostic-only, read-only, no secrets exposed (QMOJI_ADMIN_BASE_URL is a
+# public URL, not a credential) -- reports the actual outcome of the last
+# Phase-rules fetch attempt, since the caller of _fetch_curated_emojis can
+# never tell "nothing curated" apart from "the fetch itself failed" (both
+# fall back to the unfiltered emoji_list the same way). Meant to make the
+# next time this silently breaks in prod diagnosable from outside instead
+# of requiring another guess-fix-wait-recheck cycle.
+@app.route("/debug/emoji-pool")
+def debug_emoji_pool():
+    return flask.jsonify({
+        "qmoji_admin_base_url": QMOJI_ADMIN_BASE_URL,
+        "last_fetch_attempt": _last_fetch_attempt,
+        "cache_keys": list(_emoji_pool_cache.keys()),
+        "cache_en_pool_size": len(_emoji_pool_cache["en"]["pool"]) if "en" in _emoji_pool_cache else None,
+    })
 # The above and below functions send out the current emoji and the time per round respectively
 # to the frontend, so that the frontend can display it to the user
 
