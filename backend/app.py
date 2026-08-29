@@ -28,6 +28,11 @@ CORS(app, origins=[
 mongo_client = MongoClient(os.environ["MONGODB_URI"], tlsCAFile=certifi.where())
 db = mongo_client[os.environ.get("MONGODB_DB", "Project0")]
 
+#Other db for emoji lists
+emojiList_db_client = MongoClient(os.environ["emojiList_MONGODB_URI"], tlsCAFile=certifi.where())
+emoji_list_db = mongo_client[os.environ.get("MONGODB_EMOJI_LIST_DB", "EmojiListDB")]
+
+
 rooms_col = db["rooms"]
 players_col = db["players"]
 submissions_col = db["submissions"]
@@ -490,6 +495,35 @@ def send_out_scores(room_id):
         app.logger.exception("round_results failed")
         return flask.jsonify({"error": str(e)}), 500
 
+@app.route("/<room_id>/restart", methods=["POST"])
+def restart_game(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    pool = get_emoji_pool(game["language"])
+
+    game["round"] = 1
+    game["state"] = "playing"
+    game["current_emoji"] = random.choice(pool) if pool else None
+    game["submissions"] = {}
+    game["scores"] = {p["user_id"]: 0 for p in game["players"]}
+
+    rooms_col.update_one(
+        {"_id": room_id},
+        {"$set": {
+            "state": game["state"],
+            "round": game["round"],
+            "current_emoji": game["current_emoji"],
+        }},
+    )
+    for p in game["players"]:
+        players_col.update_one(
+            {"_id": f"{room_id}_{p['user_id']}"},
+            {"$set": {"score": 0}},
+        )
+
+    return flask.jsonify({"message": "Game restarted", "emoji": game["current_emoji"], "round": game["round"]})
 
 
 if __name__ == "__main__":

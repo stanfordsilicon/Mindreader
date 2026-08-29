@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useT } from './i18n';
 import { readParams } from './arcade'; // adjust path to your arcade client file
 
 type StartValues = {
@@ -22,7 +21,6 @@ function Start({
   onReveal,
   isLoading,
 }: StartValues) {
-  const t = useT();
   const navigate = useNavigate();
 
   // Arcade redirect: if launched with ?room=..., go straight to multiplayer lobby
@@ -48,7 +46,7 @@ function Start({
   return (
     <>
       <div className="qmoji-field">
-        <label htmlFor="language-input">{t('keyword_language_label')}</label>
+        <label htmlFor="language-input">Language for your keywords?</label>
         <input
           id="language-input"
           className="qmoji-input"
@@ -58,7 +56,7 @@ function Start({
       </div>
 
       <div className="qmoji-field">
-        <label htmlFor="rounds-select">{t('rounds_to_play_label')}</label>
+        <label htmlFor="rounds-select">(#) rounds)</label>
         <select
           id="rounds-select"
           className="qmoji-select"
@@ -68,7 +66,7 @@ function Start({
         >
           {ROUND_OPTIONS.map((n) => (
             <option key={n} value={n}>
-              {t('rounds_option', { n })}
+              {n} rounds
             </option>
           ))}
         </select>
@@ -79,8 +77,8 @@ function Start({
           className="qmoji-mode-card multi"
           onClick={() => handleModeSelect('multi')}
         >
-          <h4>{t('mode_multiplayer')}</h4>
-          <p>{t('mode_multiplayer_desc')}</p>
+          <h4>Multiplayer</h4>
+          <p>Match guesses with friends</p>
         </button>
       </div>
     </>
