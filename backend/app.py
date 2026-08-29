@@ -12,6 +12,7 @@ import os
 import json
 import urllib.request
 import urllib.parse
+import ssl
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -100,6 +101,9 @@ _EMOJI_POOL_FETCH_TIMEOUT_S = 3
 _emoji_pool_cache = {}  # language -> {"fetched_at": ts, "pool": [...]}
 
 
+_EMOJI_RULES_SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
+
+
 def _fetch_curated_emojis(language):
     """Returns a restricted emoji list for `language`, or None if nothing's
     curated for it yet (or qmoji-2 couldn't be reached) -- never raises."""
@@ -107,7 +111,21 @@ def _fetch_curated_emojis(language):
         QMOJI_ADMIN_BASE_URL, urllib.parse.quote(language)
     )
     try:
-        with urllib.request.urlopen(url, timeout=_EMOJI_POOL_FETCH_TIMEOUT_S) as resp:
+        # Same fix this file already applies to its Mongo connections
+        # (tlsCAFile=certifi.where()) -- without an explicit CA bundle,
+        # urlopen's default SSL context has no local issuer certificate to
+        # validate against on this host, so every HTTPS fetch here failed
+        # with SSLCertVerificationError, was swallowed by the blanket
+        # except below, and silently fell back to the unfiltered emoji
+        # list -- verified live: switching QMOJI_ADMIN_BASE_URL's default
+        # from localhost to https://qmoji.org made zero observable
+        # difference (still 100% unfiltered), because both failed the same
+        # way for different reasons (connection refused vs. cert
+        # verification). Reproduced locally without this context and
+        # confirmed it's fixed by passing one.
+        with urllib.request.urlopen(
+            url, timeout=_EMOJI_POOL_FETCH_TIMEOUT_S, context=_EMOJI_RULES_SSL_CONTEXT
+        ) as resp:
             data = json.loads(resp.read().decode("utf-8"))
     except Exception:
         return None
