@@ -124,15 +124,6 @@ export default function Room() {
   const [revealPlayers, setRevealPlayers] =
     useState<Player[]>([]);
 
-  // ---- Next-round countdown state ----
-
-  const [nextRoundCountdown, setNextRoundCountdown] =
-    useState(
-      Math.ceil(
-        AUTO_START_DELAY_MS / 1000,
-      ),
-    );
-
   // ---- Timer refs ----
 
   const revealTimerRef =
@@ -822,52 +813,6 @@ export default function Room() {
   ]);
 
   // ============================================================
-  // Next-round live countdown
-  // ============================================================
-
-  useEffect(() => {
-    if (
-      !showResults ||
-      !isHost ||
-      roomState?.state !== 'playing'
-    ) {
-      return;
-    }
-
-    setNextRoundCountdown(
-      Math.ceil(
-        AUTO_START_DELAY_MS / 1000,
-      ),
-    );
-
-    const interval =
-      window.setInterval(() => {
-        setNextRoundCountdown(
-          (prev) => {
-            if (prev <= 1) {
-              window.clearInterval(
-                interval,
-              );
-
-              return 0;
-            }
-
-            return prev - 1;
-          },
-        );
-      }, 1000);
-
-    return () =>
-      window.clearInterval(
-        interval,
-      );
-  }, [
-    showResults,
-    isHost,
-    roomState?.state,
-  ]);
-
-  // ============================================================
   // Reset result reveal
   // ============================================================
 
@@ -1515,25 +1460,6 @@ export default function Room() {
                       ),
                     )}
                 </div>
-
-                {isHost &&
-                  roomState?.state ===
-                    'playing' && (
-                    <p
-                      style={{
-                        textAlign:
-                          'center',
-                        fontSize:
-                          '0.7rem',
-                        marginTop:
-                          12,
-                      }}
-                    >
-                      {t('next_round_starting_format', {
-                        seconds: nextRoundCountdown,
-                      })}
-                    </p>
-                  )}
 
                 {roomState?.state ===
                   'ended' && (
