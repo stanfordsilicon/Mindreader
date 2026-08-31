@@ -1528,9 +1528,6 @@ export default function Room() {
                           12,
                       }}
                     >
-                      {t('next_round_countdown', {
-                        seconds: nextRoundCountdown,
-                      })}
                     </p>
                   )}
 
