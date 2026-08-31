@@ -708,6 +708,74 @@ export default function Room() {
   ]);
 
   // ============================================================
+  // Start round
+  // ============================================================
+
+  const handleStartRound =
+    useCallback(async () => {
+      if (!roomId) return;
+
+      setError('');
+      setIsSubmitting(true);
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/${roomId}/start_round`,
+          {
+            method: 'POST',
+          },
+        );
+
+        if (!res.ok) {
+          const data =
+            await res
+              .json()
+              .catch(
+                () => ({}),
+              );
+
+          if (
+            data.state ===
+            'ended'
+          ) {
+            setRoomState(
+              (prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      state:
+                        'ended',
+                    }
+                  : prev,
+            );
+
+            setShowResults(false);
+
+            return;
+          }
+
+          throw new Error(
+            data.error ||
+              t('error_fetch_emoji'),
+          );
+        }
+
+        await fetchState();
+      } catch (err: any) {
+        setError(
+          err.message ||
+            t('error_fetch_emoji'),
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    }, [
+      roomId,
+      fetchState,
+      t,
+    ]);
+
+  // ============================================================
   // Automatic next round
   // ============================================================
 
@@ -750,6 +818,7 @@ export default function Room() {
     showResults,
     isHost,
     roomState?.state,
+    handleStartRound,
   ]);
 
   // ============================================================
@@ -941,74 +1010,6 @@ export default function Room() {
     roundResults,
     revealPlayers,
   ]);
-
-  // ============================================================
-  // Start round
-  // ============================================================
-
-  const handleStartRound =
-    useCallback(async () => {
-      if (!roomId) return;
-
-      setError('');
-      setIsSubmitting(true);
-
-      try {
-        const res = await fetch(
-          `${API_BASE_URL}/${roomId}/start_round`,
-          {
-            method: 'POST',
-          },
-        );
-
-        if (!res.ok) {
-          const data =
-            await res
-              .json()
-              .catch(
-                () => ({}),
-              );
-
-          if (
-            data.state ===
-            'ended'
-          ) {
-            setRoomState(
-              (prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      state:
-                        'ended',
-                    }
-                  : prev,
-            );
-
-            setShowResults(false);
-
-            return;
-          }
-
-          throw new Error(
-            data.error ||
-              t('error_fetch_emoji'),
-          );
-        }
-
-        await fetchState();
-      } catch (err: any) {
-        setError(
-          err.message ||
-            t('error_fetch_emoji'),
-        );
-      } finally {
-        setIsSubmitting(false);
-      }
-    }, [
-      roomId,
-      fetchState,
-      t,
-    ]);
 
   // ============================================================
   // Keyword input
@@ -1528,6 +1529,9 @@ export default function Room() {
                           12,
                       }}
                     >
+                      {t('next_round_starting_format', {
+                        seconds: nextRoundCountdown,
+                      })}
                     </p>
                   )}
 
