@@ -9,7 +9,7 @@ const API_BASE_URL = (
 ).replace(/\/$/, '');
 
 const POLL_INTERVAL_MS = 2000;
-const ROUND_SECONDS = 15;
+const ROUND_SECONDS = 20;
 const COUNTDOWN_START = 3;
 const AUTO_START_DELAY_MS = 28000;
 
@@ -908,7 +908,7 @@ export default function Room() {
               goToNextPlayer();
             }
           },
-          1500,
+          2000,
         );
     }
 
