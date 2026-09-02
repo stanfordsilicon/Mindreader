@@ -1584,14 +1584,13 @@ export default function Room() {
                 </button>
               ) : (
                 <button
-                  className="qmoji-btn qmoji-btn-red"
-                  onClick={
-                    handleLeave
-                  }
-                  style={{
-                    marginTop: 8,
-                  }}
-                >{t('leave_button')}</button>
+                  className="back-to-launchpad"
+                  type="button"
+                  title="Return to launch pad"
+                  onClick={handleLeave}
+                >
+                  ← {t('back_to_launchpad')}
+                </button>
               )}
 
               <p
