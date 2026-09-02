@@ -14,6 +14,8 @@
   "leave_button": "Выйти",
   "create_button": "Создать",
   "creating_button": "Создание...",
+  "make_host_button": "Сделать хостом",
+  "error_reassign_host": "Ошибка при переназначении хоста.",
   "join_button": "Войти",
   "joining_button": "Подключение...",
   "enter_game_button": "Войти в игру",

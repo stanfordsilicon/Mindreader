@@ -428,6 +428,42 @@ def leave_room(room_id):
 
     return flask.jsonify({"success": True})
 
+@app.route("/<room_id>/reassign_host", methods=["POST"])
+def reassign_host(room_id):
+    game = games.get(room_id)
+    if not game:
+        return flask.jsonify({"error": "Room not found"}), 404
+
+    data = flask.request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    new_host_id = data.get("new_host_id")
+
+    if not user_id or not new_host_id:
+        return flask.jsonify({"error": "user_id and new_host_id are required"}), 400
+
+    if not game["players"]:
+        return flask.jsonify({"error": "Room has no players"}), 400
+
+    # Only the current host (players[0]) is allowed to reassign -- mirrors
+    # how the frontend derives isHost from players[0].user_id.
+    current_host_id = game["players"][0]["user_id"]
+    if user_id != current_host_id:
+        return flask.jsonify({"error": "Only the current host can reassign host"}), 403
+
+    if new_host_id == current_host_id:
+        return flask.jsonify({"error": "That player is already the host"}), 400
+
+    match = next((p for p in game["players"] if p["user_id"] == new_host_id), None)
+    if not match:
+        return flask.jsonify({"error": "Player not found in this room"}), 404
+
+    # Move new_host_id to the front; keep everyone else's relative order.
+    game["players"] = [match] + [
+        p for p in game["players"] if p["user_id"] != new_host_id
+    ]
+
+    return flask.jsonify({"message": "Host reassigned", "players": game["players"]})
+
 
 
 @app.route("/<room_id>/start_round", methods=["POST"])

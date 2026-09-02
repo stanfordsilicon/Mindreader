@@ -18,6 +18,8 @@
   "joining_button": "A ligar...",
   "enter_game_button": "Entrar no jogo",
   "entering_button": "A entrar…",
+  "make_host_button": "Tornar anfitrião",
+  "error_reassign_host": "Erro ao reatribuir o anfitrião.",
   "start_button": "Iniciar",
   "starting_button": "A iniciar...",
   "next_round_button": "Próxima ronda",

@@ -96,6 +96,11 @@ export default function Room() {
   const [revealedPlayerId, setRevealedPlayerId] =
     useState<string | null>(null);
 
+  // ---- Host reassignment state ----
+
+  const [reassigningHostId, setReassigningHostId] =
+    useState<string | null>(null);
+
   // ---- Timer display ----
 
   const timerProgress = Math.max(
@@ -765,6 +770,51 @@ export default function Room() {
       fetchState,
       t,
     ]);
+
+  // ============================================================
+  // Reassign host
+  // ============================================================
+
+  const handleReassignHost = useCallback(
+    async (newHostId: string) => {
+      if (!roomId || !userId) return;
+
+      setError('');
+      setReassigningHostId(newHostId);
+
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/${roomId}/reassign_host`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: userId,
+              new_host_id: newHostId,
+            }),
+          },
+        );
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(
+            data.error || t('error_reassign_host'),
+          );
+        }
+
+        await fetchState();
+      } catch (err: any) {
+        setError(
+          err.message || t('error_reassign_host'),
+        );
+      } finally {
+        setReassigningHostId(null);
+      }
+    },
+    [roomId, userId, fetchState, t],
+  );
 
   // ============================================================
   // Automatic next round
@@ -1553,6 +1603,13 @@ export default function Room() {
                           ? 'host'
                           : ''
                       }`}
+                      style={{
+                        display:
+                          'inline-flex',
+                        alignItems:
+                          'center',
+                        gap: 6,
+                      }}
                     >
                       {p.name}
 
@@ -1560,6 +1617,46 @@ export default function Room() {
                       userId
                         ? t('you_suffix')
                         : ''}
+
+                      {isHost &&
+                        p.user_id !==
+                          userId && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleReassignHost(
+                                p.user_id,
+                              )
+                            }
+                            disabled={
+                              reassigningHostId !==
+                              null
+                            }
+                            title={t('make_host_button')}
+                            style={{
+                              marginLeft: 2,
+                              border:
+                                'none',
+                              borderRadius: 6,
+                              background:
+                                'var(--qmoji-ink)',
+                              color:
+                                'var(--qmoji-white)',
+                              fontSize:
+                                '0.6rem',
+                              padding:
+                                '2px 6px',
+                              cursor:
+                                'pointer',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {reassigningHostId ===
+                            p.user_id
+                              ? '…'
+                              : '👑'}
+                          </button>
+                        )}
                     </span>
                   ),
                 )}

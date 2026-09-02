@@ -2,15 +2,18 @@
   "app_title": "Mindreader",
   "app_tagline": "¡Describe el emoji con un máximo de cuatro palabras clave en 20 segundos!",
   "footer_credit": "Desarrollado por SILICON @ Stanford",
+
   "loading": "CARGANDO",
   "loading_results": "Cargando resultados...",
   "loading_room": "Cargando la sala...",
   "loading_emoji": "Cargando emoji...",
+
   "return_to_launch_pad_tooltip": "Volver a la plataforma de lanzamiento",
   "back_button": "Atrás",
   "back_to_arcade_button": "Volver a Arcade",
   "close_button": "Cerrar",
   "leave_button": "Salir",
+  "back_to_launchpad": "Volver a la plataforma de lanzamiento",
   "create_button": "Crear",
   "creating_button": "Creando...",
   "join_button": "Entrar",
@@ -26,6 +29,7 @@
   "try_another_emoji_button": "Prueba con otro emoji",
   "random_emoji_button": "Emoji al azar",
   "show_emoji_button": "¡Enséñame un emoji!",
+
   "keyword_language_label": "¿En qué idioma quieres las palabras clave?",
   "rounds_to_play_label": "¿Cuántas rondas quieres jugar?",
   "language_label": "Idioma:",
@@ -34,37 +38,49 @@
   "choose_username_label": "Elige un nombre de usuario",
   "room_code_label": "CÓDIGO DE SALA",
   "arcade_room_connected": "Sala de juegos conectada",
+
   "name_placeholder": "Escribe tu nombre",
   "username_placeholder": "Introduce tu nombre de usuario",
   "room_code_placeholder": "XXXX",
   "keyword_placeholder": "Palabra clave {n}",
+
   "mode_multiplayer": "Multijugador",
   "mode_multiplayer_desc": "Compara tus pronósticos con los de tus amigos",
+
   "waiting_room_heading": "Esperando a todos los jugadores...",
   "players_submitted_status": "{submitted} / {total} jugadores han enviado sus respuestas",
   "waiting_for_others": "Esperando a otros jugadores o a que se agote el tiempo...",
+
   "timer_seconds_format": "{timeLeft}s",
   "timer_times_up": "¡Tiempo agotado!",
   "time_remaining": "Tiempo restante: {timeLeft} s",
+
   "player_you": "Tú",
   "you_suffix": " (tú)",
   "player_fallback_name": "Jugador {id}",
+  "make_host_button": "Nombrar anfitrión",
+  "error_reassign_host": "Error al reasignar el anfitrión.",
+
   "lets_see_what": "A ver qué...",
   "answered_suffix": " ha respondido...",
   "empty_answer_placeholder": "?",
   "round_score_format": "+{score}",
   "total_score_format": "{rank}. {name}: {total}",
   "leaderboard_rank_format": "#{rank}",
+
   "round_results_heading": "Resultados de la ronda",
   "final_results_heading": "¡Aquí están los resultados definitivos!",
   "full_leaderboard_heading": "CLASIFICACIÓN COMPLETA",
   "game_over_heading": "🏆 FIN DEL JUEGO 🏆",
   "missing_player_placeholder": "—",
+
   "keywords_saved": "¡Se han guardado correctamente tus palabras clave!",
   "no_results_yet": "Aún no hay resultados.",
+
   "session_complete": "Sesión finalizada",
   "session_complete_detail": "Has terminado {maxRounds} rondas. Empieza otra sesión para volver a jugar.",
   "rounds_option": "{n} rondas",
+
   "error_enter_name": "Introduce un nombre.",
   "error_username_before_room": "Introduce un nombre de usuario antes de crear una sala.",
   "error_enter_username": "Introduce un nombre de usuario.",

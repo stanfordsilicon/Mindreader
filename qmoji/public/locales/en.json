@@ -13,8 +13,10 @@
   "back_to_arcade_button": "Back to Arcade",
   "close_button": "Close",
   "leave_button": "Leave",
-  "back_to_launchpad": "back to launchpad",
-  "create_button": "Create"
+  "back_to_launchpad": "Back to Launch Pad",
+  "create_button": "Create",
+  "make_host_button": "Make host",
+  "error_reassign_host": "Error reassigning host.",
   "creating_button": "Creating...",
   "join_button": "Join",
   "joining_button": "Joining...",

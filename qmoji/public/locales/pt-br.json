@@ -17,6 +17,8 @@
   "join_button": "Entrar",
   "joining_button": "Conectando...",
   "enter_game_button": "Entrar no jogo",
+  "make_host_button": "Tornar anfitrião",
+  "error_reassign_host": "Erro ao reatribuir o anfitrião.",
   "entering_button": "Entrando…",
   "start_button": "Iniciar",
   "starting_button": "Iniciando...",
